@@ -27,15 +27,32 @@ BODY_FILTER = "ACCES FRONTAL EMD"
 SCRIPT_NAME = "main.py"
 
 def trigger_jenkins_job(script_name):
+    # Primero intentar con buildWithParameters
     url = f"{JENKINS_URL}/job/{JOB_NAME}/buildWithParameters"
     params = {"SCRIPT_NAME": script_name}
-    print(f"[DEBUG] Llamando a Jenkins: {url} con params {params}")
-    resp = requests.post(url, params=params, auth=(JENKINS_USER, JENKINS_TOKEN))
-    print(f"[DEBUG] Respuesta Jenkins: {resp.status_code} - {resp.text}")
-    if resp.status_code == 201:
-        print(f"[INFO] Job {JOB_NAME} lanzado correctamente con SCRIPT_NAME={script_name}")
-    else:
-        print(f"[ERROR] No se pudo lanzar el job: {resp.status_code} - {resp.text}")
+    print(f"[DEBUG] Intentando con buildWithParameters: {url}")
+    
+    try:
+        resp = requests.post(url, params=params, auth=(JENKINS_USER, JENKINS_TOKEN))
+        
+        # Si falla porque no está parametrizado, intentar build normal
+        if resp.status_code == 400 and "is not parameterized" in resp.text:
+            print("[DEBUG] Job no parametrizado, intentando build simple")
+            url = f"{JENKINS_URL}/job/{JOB_NAME}/build"
+            resp = requests.post(url, auth=(JENKINS_USER, JENKINS_TOKEN))
+        
+        print(f"[DEBUG] Respuesta Jenkins: {resp.status_code} - {resp.text}")
+        
+        if resp.status_code in [201, 200]:
+            print(f"[INFO] Job {JOB_NAME} lanzado correctamente")
+            return True
+        else:
+            print(f"[ERROR] No se pudo lanzar el job: {resp.status_code} - {resp.text}")
+            return False
+            
+    except Exception as e:
+        print(f"[ERROR] Error al llamar a Jenkins: {str(e)}")
+        return False
 
 def check_email():
     with IMAPClient(IMAP_SERVER, port=IMAP_PORT, ssl=True) as server:
