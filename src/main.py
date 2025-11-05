@@ -12,9 +12,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.firefox import GeckoDriverManager
 
 # =========================
-# Cargar configuración
+# Cargar configuración desde .env local
 # =========================
-load_dotenv()
+load_dotenv(dotenv_path=os.path.join(os.getcwd(), ".env"))
+
 WORKSPACE = os.getenv("WORKSPACE", os.getcwd())
 ACCES_FRONTAL_EMD_URL = os.getenv("ACCES_FRONTAL_EMD_URL")
 FIREFOX_PROFILE_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(WORKSPACE, "profiles", "selenium_cert")
@@ -57,7 +58,21 @@ def setup_driver() -> webdriver.Firefox:
     driver.set_page_load_timeout(60)
     return driver
 
-def wait_and_click(driver, by, value, description):
+def click_shadow_element(driver, script: str, error_message="Error al acceder al elemento Shadow DOM") -> bool:
+    try:
+        element = driver.execute_script(script)
+        if not element:
+            raise ValueError("Elemento Shadow DOM no encontrado")
+        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
+        time.sleep(0.5)
+        element.click()
+        return True
+    except Exception as e:
+        log("error", f"{error_message} - {e}")
+        save_screenshot(driver, "error_shadow")
+        return False
+
+def click_element(driver, by, value, description) -> bool:
     try:
         WebDriverWait(driver, DEFAULT_WAIT).until(EC.element_to_be_clickable((by, value)))
         elem = driver.find_element(by, value)
@@ -71,46 +86,88 @@ def wait_and_click(driver, by, value, description):
         save_screenshot(driver, f"error_click_{description}")
         return False
 
+def click_btn_cert(driver) -> bool:
+    try:
+        elem = WebDriverWait(driver, DEFAULT_WAIT).until(
+            EC.presence_of_element_located((By.ID, "btnContinuaCertCaptcha"))
+        )
+        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
+        time.sleep(1)
+        elem.click()
+        log("info", "Botón 'btnContinuaCertCaptcha' clicado.")
+        return True
+    except Exception:
+        log("warn", "Botón no encontrado en DOM principal. Buscando en iframes...")
+        for iframe in driver.find_elements(By.TAG_NAME, "iframe"):
+            driver.switch_to.frame(iframe)
+            try:
+                elem_iframe = WebDriverWait(driver, DEFAULT_WAIT).until(
+                    EC.presence_of_element_located((By.ID, "btnContinuaCertCaptcha"))
+                )
+                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem_iframe)
+                time.sleep(1)
+                elem_iframe.click()
+                log("info", "Botón clicado en iframe.")
+                driver.switch_to.default_content()
+                return True
+            except Exception:
+                driver.switch_to.default_content()
+                continue
+        return False
+
 # =========================
-# Flujo principal optimizado
+# Flujo principal
 # =========================
 def run_automation():
     driver = setup_driver()
-    element_found = False
     try:
         log("info", f"Accediendo a: {ACCES_FRONTAL_EMD_URL}")
         driver.get(ACCES_FRONTAL_EMD_URL)
         WebDriverWait(driver, DEFAULT_WAIT).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
         log("info", "Página cargada correctamente.")
 
-        # Aquí irían los pasos intermedios con wait_and_click(...)
-        # Ejemplo:
-        # wait_and_click(driver, By.ID, "btnContinuaCertCaptcha", "Botón Continuar")
+        shadow_query = (
+            'return document.querySelector("#single-spa-application\\\\:mfe-main-app > app-root").'
+            'shadowRoot.querySelector("main > app-acces > div > div.left > button")'
+        )
+        if not click_shadow_element(driver, shadow_query, "Botón 'Soc un ciutadà/ana' no encontrado"):
+            return False
 
-        # Buscar el elemento clave UNA sola vez
+        time.sleep(2)
+
+        if not click_btn_cert(driver):
+            return False
+
+        if not click_element(driver, By.ID, "apt_did", "Elemento 'Dades i documents' no encontrado"):
+            return False
+
+        if not click_element(driver, By.XPATH, '//*[@id="center_1R"]/app-root/app-home/div/div[2]/div[2]/h3/a', "Link 'Els meus documents' no encontrado"):
+            return False
+        save_screenshot(driver, "05_docs_click")
+
+        log("info", "Esperando carga final del contenido...")
         try:
             WebDriverWait(driver, DEFAULT_WAIT * 3).until(
                 EC.visibility_of_element_located((By.XPATH, '//*[@id="center_1R"]/app-root/app-emd/emd-home/emd-documents/div/emd-cards-view/ul/li[1]/div'))
             )
-            element_found = True
-            log("info", "Elemento clave encontrado durante el flujo.")
-        except Exception:
-            log("warn", "Elemento clave NO encontrado durante el flujo.")
-
-        # Decisión final usando la variable
-        if element_found:
-            log("warn", "Alarma ACCES FRONTAL EMD falso positivo")
-            save_screenshot(driver, "falso_positivo")
+            log("info", "✅ Flujo completado correctamente.")
+            save_screenshot(driver, "06_final_ok")
             with open(os.path.join(logs_dir, "status.txt"), "w") as f:
                 f.write("falso_positivo")
             return True
-        else:
+        except Exception:
             log("error", "Alarma ACCES FRONTAL EMD confirmada")
             save_screenshot(driver, "alarma_confirmada")
             with open(os.path.join(logs_dir, "status.txt"), "w") as f:
                 f.write("alarma_confirmada")
             return False
 
+    except Exception as e:
+        log("error", f"Error en ejecución: {e}")
+        save_screenshot(driver, "error_general")
+        with open(os.path.join(logs_dir, "status.txt"), "w") as f:
+            f.write("alarma_confirmada")
+        return False
     finally:
         driver.quit()
         log("info", "Driver cerrado correctamente.")

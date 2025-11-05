@@ -27,22 +27,12 @@ node('main') {
             }
 
             stage('Preparar entorno') {
+                // No sobreescribimos tu .env, usamos el que ya está en el servidor
                 sh """
                     set -e
                     python3 -m venv venv
                     ./venv/bin/pip install --upgrade pip
                     ./venv/bin/pip install -r requirements.txt
-
-                    cat > .env << EOL
-                    EMAIL_USER=${EMAIL_CREDS_USR}
-                    EMAIL_PASS=${EMAIL_CREDS_PSW}
-                    JENKINS_USER=${JENKINS_CREDS_USR}
-                    JENKINS_TOKEN=${JENKINS_CREDS_PSW}
-                    JENKINS_URL=http://localhost:8080
-                    JOB_NAME=GSIT_alertas
-                    ACCES_FRONTAL_EMD_URL=https://example.com
-                    DEFAULT_WAIT=10
-                    EOL
                 """
             }
 
