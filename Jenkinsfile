@@ -4,6 +4,9 @@ pipeline {
         timestamps()
         buildDiscarder(logRotator(numToKeepStr: '20'))
     }
+    parameters {
+        string(name: 'SCRIPT_NAME', defaultValue: 'main.py', description: 'Script Python a ejecutar')
+    }
     stages {
         stage('Checkout') {
             steps {
@@ -40,17 +43,17 @@ pipeline {
                 '''
             }
         }
-        stage('Ejecutar script Selenium') {
+        stage('Ejecutar script Python') {
             steps {
                 sh '''
                 set -e
                 PROFILE_PATH="$WORKSPACE/profiles/selenium_cert"
                 if command -v xvfb-run >/dev/null 2>&1; then
                     echo "Using xvfb-run to provide a virtual display"
-                    xvfb-run -a ./venv/bin/python src/main.py "$PROFILE_PATH"
+                    xvfb-run -a ./venv/bin/python src/${SCRIPT_NAME} "$PROFILE_PATH"
                 else
                     echo "xvfb-run not available, running without Xvfb"
-                    ./venv/bin/python src/main.py "$PROFILE_PATH"
+                    ./venv/bin/python src/${SCRIPT_NAME} "$PROFILE_PATH"
                 fi
                 '''
             }
@@ -63,10 +66,10 @@ pipeline {
         }
         failure {
             emailext(
-                subject: "❌ Fallo en ejecución GSIT_alertas",
-                body: """<p>El job <b>GSIT_alertas</b> ha fallado.</p>
-                         <p>Revisa el log adjunto y las capturas para más detalles.</p>""",
-                to: "ecommerceoperaciones01@gmail.com",
+                subject: "❌ Fallo en ejecución ${SCRIPT_NAME}",
+                body: """<p>El job ha fallado ejecutando <b>${SCRIPT_NAME}</b>.</p>
+                         <p>Revisa el log adjunto y las capturas.</p>""",
+                to: "destinatario@dominio.com",
                 attachmentsPattern: "logs/*.log, screenshots/*.png"
             )
         }
