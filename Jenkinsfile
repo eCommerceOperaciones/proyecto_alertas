@@ -7,7 +7,7 @@ pipeline {
   stages {
       stage('Checkout') {
           steps {
-              git branch: 'prueba-vscode', url: 'bloqueado'
+              git branch: 'prueba-vscode', url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git'
           }
       }
       stage('Diagnóstico nodo') {
