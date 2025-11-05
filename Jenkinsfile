@@ -45,17 +45,26 @@ pipeline {
     }
     post {
         always {
-            archiveArtifacts artifacts: 'screenshots/*.png', allowEmptyArchive: true
-            archiveArtifacts artifacts: 'logs/*.log', allowEmptyArchive: true
+            script {
+                // Forzar ejecución en el mismo workspace
+                dir("${env.WORKSPACE}") {
+                    archiveArtifacts artifacts: 'screenshots/*.png', allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'logs/*.log', allowEmptyArchive: true
+                }
+            }
         }
         failure {
-            emailext(
-                subject: "❌ Fallo en ejecución ${SCRIPT_NAME}",
-                body: """<p>El job ha fallado ejecutando <b>${SCRIPT_NAME}</b>.</p>
-                         <p>Revisa el log adjunto y las capturas.</p>""",
-                to: "ecommerceoperaciones01@gmail.com",
-                attachmentsPattern: "logs/*.log, screenshots/*.png"
-            )
+            script {
+                dir("${env.WORKSPACE}") {
+                    emailext(
+                        subject: "❌ Fallo en ejecución ${SCRIPT_NAME}",
+                        body: """<p>El job ha fallado ejecutando <b>${SCRIPT_NAME}</b>.</p>
+                                 <p>Revisa el log adjunto y las capturas.</p>""",
+                        to: "ecommerceoperaciones01@gmail.com",
+                        attachmentsPattern: "logs/*.log, screenshots/*.png"
+                    )
+                }
+            }
         }
     }
 }
