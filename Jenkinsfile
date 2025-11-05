@@ -9,15 +9,15 @@ properties([
     ])
 ])
 
-node('main') {  // Usamos el label configurado en el Built-In Node
+node('main') {  // Usa el label que configuraste en tu nodo
     withCredentials([
         usernamePassword(
-            credentialsId: 'email-alertas',
+            credentialsId: 'email-alertas-user', // ID correcto del email
             usernameVariable: 'EMAIL_CREDS_USR',
             passwordVariable: 'EMAIL_CREDS_PSW'
         ),
         usernamePassword(
-            credentialsId: 'jenkins-api',
+            credentialsId: 'jenkins-api', // ID correcto de la API Jenkins
             usernameVariable: 'JENKINS_CREDS_USR',
             passwordVariable: 'JENKINS_CREDS_PSW'
         )
