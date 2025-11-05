@@ -71,20 +71,12 @@ def wait_and_click(driver, by, value, description):
         save_screenshot(driver, f"error_click_{description}")
         return False
 
-def check_element(driver) -> bool:
-    try:
-        WebDriverWait(driver, DEFAULT_WAIT * 3).until(
-            EC.visibility_of_element_located((By.XPATH, '//*[@id="center_1R"]/app-root/app-emd/emd-home/emd-documents/div/emd-cards-view/ul/li[1]/div'))
-        )
-        return True
-    except Exception:
-        return False
-
 # =========================
-# Flujo principal
+# Flujo principal optimizado
 # =========================
 def run_automation():
     driver = setup_driver()
+    element_found = False
     try:
         log("info", f"Accediendo a: {ACCES_FRONTAL_EMD_URL}")
         driver.get(ACCES_FRONTAL_EMD_URL)
@@ -95,7 +87,18 @@ def run_automation():
         # Ejemplo:
         # wait_and_click(driver, By.ID, "btnContinuaCertCaptcha", "Botón Continuar")
 
-        if check_element(driver):
+        # Buscar el elemento clave UNA sola vez
+        try:
+            WebDriverWait(driver, DEFAULT_WAIT * 3).until(
+                EC.visibility_of_element_located((By.XPATH, '//*[@id="center_1R"]/app-root/app-emd/emd-home/emd-documents/div/emd-cards-view/ul/li[1]/div'))
+            )
+            element_found = True
+            log("info", "Elemento clave encontrado durante el flujo.")
+        except Exception:
+            log("warn", "Elemento clave NO encontrado durante el flujo.")
+
+        # Decisión final usando la variable
+        if element_found:
             log("warn", "Alarma ACCES FRONTAL EMD falso positivo")
             save_screenshot(driver, "falso_positivo")
             with open(os.path.join(logs_dir, "status.txt"), "w") as f:
