@@ -16,7 +16,7 @@ from webdriver_manager.firefox import GeckoDriverManager
 # =========================
 load_dotenv()
 WORKSPACE = os.getenv("WORKSPACE", os.getcwd())
-ACCES_FRONTAL_EMD_URL = os.getenv("ACCES_FRONTAL_EMD_URL", "https://example.com")
+ACCES_FRONTAL_EMD_URL = os.getenv("ACCES_FRONTAL_EMD_URL")
 FIREFOX_PROFILE_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(WORKSPACE, "profiles", "selenium_cert")
 DEFAULT_WAIT = int(os.getenv("DEFAULT_WAIT", "10"))
 
