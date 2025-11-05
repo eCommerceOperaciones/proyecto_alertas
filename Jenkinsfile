@@ -1,14 +1,18 @@
 pipeline {
     agent any
     options {
-        timestamps() // logs con hora
-        buildDiscarder(logRotator(numToKeepStr: '20')) // mantener solo últimos 20 builds
+        timestamps()
+        buildDiscarder(logRotator(numToKeepStr: '20'))
     }
     stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'prueba-vscode', url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git'
+            }
+        }
         stage('Preparar entorno') {
             steps {
                 sh '''
-                cd ~/proyectos/proyecto_alertas
                 python3 -m venv venv
                 source venv/bin/activate
                 pip install --upgrade pip
@@ -19,7 +23,6 @@ pipeline {
         stage('Ejecutar script Selenium') {
             steps {
                 sh '''
-                cd ~/proyectos/proyecto_alertas
                 source venv/bin/activate
                 python src/main.py
                 '''
