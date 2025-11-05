@@ -1,4 +1,3 @@
-// Scripted Pipeline con parámetros y credenciales
 properties([
     parameters([
         string(
@@ -9,15 +8,15 @@ properties([
     ])
 ])
 
-node('main') {  // Usa el label que configuraste en tu nodo
+node('main') {  // Usa el label configurado en tu nodo
     withCredentials([
         usernamePassword(
-            credentialsId: 'email-alertas-user', // ID correcto del email
+            credentialsId: 'email-alertas-user',
             usernameVariable: 'EMAIL_CREDS_USR',
             passwordVariable: 'EMAIL_CREDS_PSW'
         ),
         usernamePassword(
-            credentialsId: 'jenkins-api', // ID correcto de la API Jenkins
+            credentialsId: 'jenkins-api',
             usernameVariable: 'JENKINS_CREDS_USR',
             passwordVariable: 'JENKINS_CREDS_PSW'
         )
@@ -48,8 +47,7 @@ node('main') {  // Usa el label que configuraste en tu nodo
             stage('Ejecutar script') {
                 sh """
                     set -e
-                    PROFILE_PATH="$WORKSPACE/profiles/selenium_cert"
-                    ./venv/bin/python src/${SCRIPT_NAME} "$PROFILE_PATH"
+                    ./venv/bin/python src/${SCRIPT_NAME} "$WORKSPACE/profiles/selenium_cert"
                 """
             }
 
