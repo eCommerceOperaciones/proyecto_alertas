@@ -1,4 +1,5 @@
 import os
+import sys
 import platform
 import time
 from selenium import webdriver
@@ -13,10 +14,11 @@ from selenium.webdriver.support import expected_conditions as EC
 # =========================
 if platform.system().lower() == "windows":
   GECKO_PATH = r"C:\proyectos\proyecto_alertas\drivers\geckodriver.exe"
-  FIREFOX_PROFILE_PATH = r"C:\Users\0017888\AppData\Roaming\Mozilla\Firefox\Profiles\0wgx01v1.selenium_cert"
 else:
   GECKO_PATH = os.path.expanduser("~/proyectos/proyecto_alertas/drivers/geckodriver")
-  FIREFOX_PROFILE_PATH = os.path.expanduser("~/proyectos/proyecto_alertas/profiles/selenium_cert")
+
+# Ruta del perfil recibida como argumento o por defecto
+FIREFOX_PROFILE_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.getcwd(), "profiles", "selenium_cert")
 
 ACCES_FRONTAL_EMD_URL = "https://ovt.gencat.cat/carpetaciutadana360/mfe-main-app/#/acces?set-locale=ca_ES"
 DEFAULT_WAIT = 10
@@ -36,7 +38,6 @@ def save_screenshot(driver, name: str) -> None:
   log("info", f"Captura guardada: {filename}")
 
 def wait_for_loaders(driver):
-  """Espera a que desaparezcan los elementos de carga antes de continuar."""
   try:
       WebDriverWait(driver, DEFAULT_WAIT * 3).until(
           EC.invisibility_of_element_located((By.CSS_SELECTOR, ".spinner, .loading, .NG-spinner"))
@@ -46,27 +47,22 @@ def wait_for_loaders(driver):
       log("warn", "No se detectaron spinners o no desaparecieron en el tiempo esperado.")
 
 def click_element(driver, by, value, error_message="", iframe_selector=None) -> bool:
-  """Intenta hacer clic en un elemento, esperando que la página esté lista."""
   try:
-      wait_for_loaders(driver)  # Espera antes de cada clic
-
+      wait_for_loaders(driver)
       if iframe_selector:
           iframe = WebDriverWait(driver, DEFAULT_WAIT).until(
               EC.presence_of_element_located((By.CSS_SELECTOR, iframe_selector))
           )
           driver.switch_to.frame(iframe)
-
       elem = WebDriverWait(driver, DEFAULT_WAIT).until(
           EC.element_to_be_clickable((by, value))
       )
       driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
       time.sleep(0.5)
       elem.click()
-
       if iframe_selector:
           driver.switch_to.default_content()
       return True
-
   except Exception as e:
       log("error", f"{error_message or 'Error haciendo clic'} - {e}")
       save_screenshot(driver, f"error_click_{value}")
@@ -135,7 +131,6 @@ def click_btn_cert(driver) -> bool:
 
       log("error", "No se encontró el botón 'btnContinuaCertCaptcha' en ningún iframe.")
       return False
-
   except Exception as e:
       log("error", f"Error en click_btn_cert: {e}")
       save_screenshot(driver, "error_click_btn_cert")
@@ -145,15 +140,12 @@ def click_btn_cert(driver) -> bool:
 def setup_driver() -> webdriver.Firefox:
   if not os.path.exists(FIREFOX_PROFILE_PATH):
       raise FileNotFoundError(f"No se encontró el perfil de Firefox en {FIREFOX_PROFILE_PATH}")
-
   options = Options()
   options.add_argument("--headless")
   options.add_argument("--no-sandbox")
   options.add_argument("--disable-dev-shm-usage")
-
   profile = webdriver.FirefoxProfile(FIREFOX_PROFILE_PATH)
   options.profile = profile
-
   service = Service(executable_path=GECKO_PATH)
   driver = webdriver.Firefox(service=service, options=options)
   driver.set_page_load_timeout(60)
@@ -168,10 +160,8 @@ def run_automation():
       log("info", f"Accediendo a: {ACCES_FRONTAL_EMD_URL}")
       driver.get(ACCES_FRONTAL_EMD_URL)
       save_screenshot(driver, "01_inicio")
-
       WebDriverWait(driver, DEFAULT_WAIT).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
       log("info", "Página cargada correctamente.")
-
       shadow_query = (
           'return document.querySelector("#single-spa-application\\\\:mfe-main-app > app-root").'
           'shadowRoot.querySelector("main > app-acces > div > div.left > button")'
@@ -179,30 +169,23 @@ def run_automation():
       if not click_shadow_element(driver, shadow_query, "Botón 'Soc un ciutadà/ana' no encontrado"):
           return False
       save_screenshot(driver, "02_shadow_click")
-
       time.sleep(2)
-
       if not click_btn_cert(driver):
           return False
       save_screenshot(driver, "03_cert_click")
-
       if not click_element(driver, By.ID, "apt_did", "Elemento 'Dades i documents' no encontrado"):
           return False
       save_screenshot(driver, "04_dades_click")
-
       if not click_element(driver, By.XPATH, '//*[@id="center_1R"]/app-root/app-home/div/div[2]/div[2]/h3/a', "Link 'Els meus documents' no encontrado"):
           return False
       save_screenshot(driver, "05_docs_click")
-
       log("info", "Esperando carga final del contenido...")
       WebDriverWait(driver, DEFAULT_WAIT * 3).until(
           EC.visibility_of_element_located((By.XPATH, '//*[@id="center_1R"]/app-root/app-emd/emd-home/emd-documents/div/emd-cards-view/ul/li[1]/div'))
       )
       log("info", "✅ Flujo completado correctamente.")
       save_screenshot(driver, "06_final_ok")
-
       return True
-
   except Exception as e:
       log("error", f"Error en ejecución: {e}")
       save_screenshot(driver, "error_general")
@@ -211,8 +194,5 @@ def run_automation():
       driver.quit()
       log("info", "Driver cerrado correctamente.")
 
-# =========================
-# PUNTO DE ENTRADA
-# =========================
 if __name__ == "__main__":
   run_automation()

@@ -46,12 +46,13 @@ pipeline {
           steps {
               sh '''
               set -e
+              PROFILE_PATH="$WORKSPACE/profiles/selenium_cert"
               if command -v xvfb-run >/dev/null 2>&1; then
                   echo "Using xvfb-run to provide a virtual display"
-                  xvfb-run -a ./venv/bin/python src/main.py
+                  xvfb-run -a ./venv/bin/python src/main.py "$PROFILE_PATH"
               else
                   echo "xvfb-run not available, running without Xvfb"
-                  ./venv/bin/python src/main.py
+                  ./venv/bin/python src/main.py "$PROFILE_PATH"
               fi
               '''
           }
