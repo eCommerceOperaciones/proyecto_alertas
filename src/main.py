@@ -20,7 +20,7 @@ os.makedirs(screenshots_dir, exist_ok=True)
 os.makedirs(logs_dir, exist_ok=True)
 
 FIREFOX_PROFILE_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(WORKSPACE, "profiles", "selenium_cert")
-ACCES_FRONTAL_EMD_URL = "bloqubloqueado"
+ACCES_FRONTAL_EMD_URL = "https://ovt.gencat.cat/carpetaciutadana360/mfe-main-app/#/acces?set-locale=ca_ES"
 DEFAULT_WAIT = 10
 
 # =========================
