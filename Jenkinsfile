@@ -4,11 +4,10 @@ pipeline {
         string(name: 'SCRIPT_NAME', defaultValue: 'main.py', description: 'Script Python a ejecutar')
     }
     environment {
-        EMAIL_USER = credentials('email-alertas-user')
-        EMAIL_PASS = credentials('email-alertas-pass')
-        JENKINS_USER = credentials('jenkins-api-user')
-        JENKINS_TOKEN = credentials('jenkins-api-token')
-        JENKINS_URL = 'http://localhost:8080'  // Ajusta según tu entorno
+        // Credenciales como username/password
+        EMAIL_CREDS = credentials('email-alertas')      // Para email
+        JENKINS_CREDS = credentials('jenkins-api')      // Para API Jenkins
+        JENKINS_URL = 'http://localhost:8080'           // Ajusta según tu entorno
     }
     stages {
         stage('Checkout') {
@@ -26,10 +25,10 @@ pipeline {
 
                 # Crear .env temporal para la ejecución
                 cat > .env << EOL
-                EMAIL_USER=${EMAIL_USER}
-                EMAIL_PASS=${EMAIL_PASS}
-                JENKINS_USER=${JENKINS_USER}
-                JENKINS_TOKEN=${JENKINS_TOKEN}
+                EMAIL_USER=${EMAIL_CREDS_USR}
+                EMAIL_PASS=${EMAIL_CREDS_PSW}
+                JENKINS_USER=${JENKINS_CREDS_USR}
+                JENKINS_TOKEN=${JENKINS_CREDS_PSW}
                 JENKINS_URL=${JENKINS_URL}
                 JOB_NAME=${JOB_NAME}
                 EOL
