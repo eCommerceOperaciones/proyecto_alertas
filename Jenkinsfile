@@ -1,6 +1,9 @@
 pipeline {
     agent any
     options {
+pipeline {
+    agent any
+    options {
         timestamps()
         buildDiscarder(logRotator(numToKeepStr: '20'))
     }
@@ -9,8 +12,6 @@ pipeline {
             steps {
                 git branch: 'prueba-vscode', url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git'
             }
-        }
-        stage('Preparar entorno') {
             steps {
                 // Use POSIX-safe commands and call venv's executables directly to avoid `source` (bash-only)
                 sh '''
