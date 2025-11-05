@@ -4,5 +4,4 @@ __pycache__/
 *.log
 screenshots/
 drivers/
-profiles/
 .vscode/
