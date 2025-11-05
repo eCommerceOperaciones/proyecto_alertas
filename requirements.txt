@@ -1,4 +1,4 @@
 selenium==4.18.1
 webdriver-manager==4.0.1
 imapclient
-beautifulsoup4
+beautifulsoup4python-dotenv==1.2.1
