@@ -1,0 +1,92 @@
+# Configuración Local Git/SSH
+
+Este documento describe la configuración local realizada para el acceso Git via SSH.
+
+## Configuración Git
+
+```bash
+git config --global user.name "Rodrigo"
+git config --global user.email "ecommerceoperaciones01@gmail.com"
+```
+
+## Configuración SSH
+
+### Clave SSH
+- Generada clave ED25519: `~/.ssh/id_ed25519`
+- Clave pública añadida a GitHub como "SSH_VSCODE_LINUX"
+- Fingerprint: `SHA256:0XTxzu+gM6YgDVyAOp0lmLJ4vHB3O/NXMrKz+VI4ZB8`
+
+### Configuración Systemd User
+
+Unidades creadas en `~/.config/systemd/user/`:
+
+1. `ssh-agent.service`:
+```ini
+[Unit]
+Description=Per-user SSH agent
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ssh-agent -a %t/ssh-agent.socket -D
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
+```
+
+2. `ssh-add@.service`:
+```ini
+[Unit]
+Description=Add SSH key %i to agent
+After=ssh-agent.service
+
+[Service]
+Type=oneshot
+Environment=SSH_AUTH_SOCK=%t/ssh-agent.socket
+ExecStart=/usr/bin/ssh-add %I
+RemainAfterExit=yes
+
+[Install]
+WantedBy=default.target
+```
+
+Servicios habilitados:
+- `ssh-agent.service`
+- `ssh-add@-home-rodrigo-.ssh-id_ed25519.service`
+
+### Variables de Entorno
+Añadido a `~/.profile`:
+```bash
+export SSH_AUTH_SOCK="/run/user/$(id -u)/ssh-agent.socket"
+```
+
+## Configuración VS Code
+- Remote repositorio cambiado a SSH: `git@github.com:eCommerceOperaciones/proyecto_alertas.git`
+- Extensiones instaladas:
+  - GitLens
+  - GitHub Pull Requests and Issues
+
+## Pruebas Realizadas
+- Push exitoso de rama `prueba-vscode`
+- Clave SSH cargada automáticamente via systemd user
+- Verificación `ssh-add -l` muestra la clave ED25519
+
+## Troubleshooting
+
+Si las identidades SSH no están disponibles en una nueva terminal:
+```bash
+# Verificar que el socket existe
+ls -l /run/user/$(id -u)/ssh-agent.socket
+
+# Verificar identidades cargadas
+ssh-add -l
+
+# Si es necesario, exportar manualmente
+export SSH_AUTH_SOCK="/run/user/$(id -u)/ssh-agent.socket"
+```
+
+## Mejoras Futuras Posibles
+- Configurar Git Credential Manager (GCM) con libsecret para credenciales HTTPS
+- Añadir hooks pre-commit para linting/testing
+- Configurar CI/CD con GitHub Actions
