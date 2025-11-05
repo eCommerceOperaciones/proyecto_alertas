@@ -7,7 +7,6 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                // Usa la configuración de credenciales del job, no es necesario poner credentialsId aquí
                 git branch: 'prueba-vscode', url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git'
             }
         }
@@ -61,6 +60,15 @@ pipeline {
         always {
             archiveArtifacts artifacts: 'screenshots/*.png', allowEmptyArchive: true
             archiveArtifacts artifacts: 'logs/*.log', allowEmptyArchive: true
+        }
+        failure {
+            emailext(
+                subject: "❌ Fallo en ejecución GSIT_alertas",
+                body: """<p>El job <b>GSIT_alertas</b> ha fallado.</p>
+                         <p>Revisa el log adjunto y las capturas para más detalles.</p>""",
+                to: "ecommerceoperacones@gmail.com",
+                attachmentsPattern: "logs/*.log, screenshots/*.png"
+            )
         }
     }
 }
