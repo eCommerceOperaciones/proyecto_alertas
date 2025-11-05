@@ -16,7 +16,7 @@ from webdriver_manager.firefox import GeckoDriverManager  # Nuevo import
 # Ruta del perfil recibida como argumento o por defecto
 FIREFOX_PROFILE_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.getcwd(), "profiles", "selenium_cert")
 
-ACCES_FRONTAL_EMD_URL = "bloquhttps://ovt.gencat.cat/carpetaciutadana360/mfe-main-app/#/acces?set-locale=ca_ESeado"
+ACCES_FRONTAL_EMD_URL = ".cat/carpetaciutadana360/mfe-main-app/#/acces?set-locale=ca_ESeado"
 DEFAULT_WAIT = 10
 
 # =========================
