@@ -40,6 +40,8 @@ node('main') {
                     JENKINS_TOKEN=${JENKINS_CREDS_PSW}
                     JENKINS_URL=http://localhost:8080
                     JOB_NAME=GSIT_alertas
+                    ACCES_FRONTAL_EMD_URL=https://example.com
+                    DEFAULT_WAIT=10
                     EOL
                 """
             }
@@ -51,7 +53,19 @@ node('main') {
                 """
             }
 
-            currentBuild.result = 'SUCCESS'
+            stage('Verificar estado') {
+                script {
+                    def statusFile = sh(script: "find runs -name status.txt | head -n 1", returnStdout: true).trim()
+                    def status = readFile(statusFile).trim()
+                    if (status == "falso_positivo") {
+                        echo "Falso positivo detectado. Programando reintento en 5 minutos..."
+                        sleep(time: 5, unit: "MINUTES")
+                        build job: env.JOB_NAME, wait: false
+                    } else if (status == "alarma_confirmada") {
+                        currentBuild.result = 'FAILURE'
+                    }
+                }
+            }
 
         } catch (err) {
             currentBuild.result = 'FAILURE'
@@ -62,8 +76,8 @@ node('main') {
 
                 if (currentBuild.result == 'FAILURE') {
                     emailext(
-                        subject: "❌ Fallo en ejecución ${SCRIPT_NAME}",
-                        body: """<p>Elemento no encontrado tras reintento.</p>
+                        subject: "🚨 Alarma ACCES FRONTAL EMD confirmada",
+                        body: """<p>Se ha confirmado la alarma ACCES FRONTAL EMD.</p>
                                  <p>Revisa la carpeta de ejecución para logs y capturas.</p>""",
                         to: "ecommerceoperaciones01@gmail.com",
                         attachmentsPattern: "runs/**/logs/*.log, runs/**/screenshots/*.png"
