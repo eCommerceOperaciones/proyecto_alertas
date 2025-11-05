@@ -8,27 +8,33 @@ from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.firefox import GeckoDriverManager  # Nuevo import
+from webdriver_manager.firefox import GeckoDriverManager
 
 # =========================
 # CONFIGURACION GENERAL
 # =========================
-# Ruta del perfil recibida como argumento o por defecto
-FIREFOX_PROFILE_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.getcwd(), "profiles", "selenium_cert")
+WORKSPACE = os.getenv("WORKSPACE", os.getcwd())
+screenshots_dir = os.path.join(WORKSPACE, "screenshots")
+logs_dir = os.path.join(WORKSPACE, "logs")
+os.makedirs(screenshots_dir, exist_ok=True)
+os.makedirs(logs_dir, exist_ok=True)
 
-ACCES_FRONTAL_EMD_URL = ".cat/carpetaciutadana360/mfe-main-app/#/acces?set-locale=ca_ESeado"
+FIREFOX_PROFILE_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(WORKSPACE, "profiles", "selenium_cert")
+ACCES_FRONTAL_EMD_URL = "bloqubloqueado"
 DEFAULT_WAIT = 10
 
 # =========================
 # FUNCIONES AUXILIARES
 # =========================
 def log(level: str, message: str) -> None:
-    print(f"[{level.upper()}] {message}")
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    line = f"[{timestamp}] [{level.upper()}] {message}"
+    print(line)
+    with open(os.path.join(logs_dir, "execution.log"), "a", encoding="utf-8") as f:
+        f.write(line + "\n")
 
 def save_screenshot(driver, name: str) -> None:
     timestamp = time.strftime("%Y%m%d_%H%M%S")
-    screenshots_dir = os.path.expanduser("~/proyectos/proyecto_alertas/screenshots")
-    os.makedirs(screenshots_dir, exist_ok=True)
     filename = os.path.join(screenshots_dir, f"{name}_{timestamp}.png")
     driver.save_screenshot(filename)
     log("info", f"Captura guardada: {filename}")
@@ -142,7 +148,6 @@ def setup_driver() -> webdriver.Firefox:
     options.add_argument("--disable-dev-shm-usage")
     profile = webdriver.FirefoxProfile(FIREFOX_PROFILE_PATH)
     options.profile = profile
-    # Usar WebDriver Manager para obtener el driver automáticamente
     service = Service(GeckoDriverManager().install())
     driver = webdriver.Firefox(service=service, options=options)
     driver.set_page_load_timeout(60)
@@ -192,4 +197,6 @@ def run_automation():
         log("info", "Driver cerrado correctamente.")
 
 if __name__ == "__main__":
-    run_automation()
+    success = run_automation()
+    if not success:
+        sys.exit(1)  # Esto hará que Jenkins marque el build como FAILURE
