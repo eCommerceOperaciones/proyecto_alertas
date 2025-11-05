@@ -8,7 +8,7 @@ properties([
     ])
 ])
 
-node('main') {  // Usa el label configurado en tu nodo
+node('main') {
     withCredentials([
         usernamePassword(
             credentialsId: 'email-alertas-user',
@@ -58,16 +58,15 @@ node('main') {  // Usa el label configurado en tu nodo
             echo "❌ Error: ${err}"
         } finally {
             stage('Post - Archivar y Notificar') {
-                archiveArtifacts artifacts: 'screenshots/*.png', allowEmptyArchive: true
-                archiveArtifacts artifacts: 'logs/*.log', allowEmptyArchive: true
+                archiveArtifacts artifacts: 'runs/**', allowEmptyArchive: true
 
                 if (currentBuild.result == 'FAILURE') {
                     emailext(
                         subject: "❌ Fallo en ejecución ${SCRIPT_NAME}",
-                        body: """<p>El job ha fallado ejecutando <b>${SCRIPT_NAME}</b>.</p>
-                                 <p>Revisa el log adjunto y las capturas.</p>""",
+                        body: """<p>Elemento no encontrado tras reintento.</p>
+                                 <p>Revisa la carpeta de ejecución para logs y capturas.</p>""",
                         to: "ecommerceoperaciones01@gmail.com",
-                        attachmentsPattern: "logs/*.log, screenshots/*.png"
+                        attachmentsPattern: "runs/**/logs/*.log, runs/**/screenshots/*.png"
                     )
                 }
             }
