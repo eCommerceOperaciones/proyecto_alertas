@@ -1,0 +1,14 @@
+services:
+  jenkins:
+    build: .
+    container_name: jenkins_alertas
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - C:/proyectos/proyecto_alertas:/var/jenkins_home/alert_system
+    restart: unless-stopped
+
+volumes:
+  jenkins_home:
