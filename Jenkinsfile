@@ -66,7 +66,7 @@ pipeline {
                 subject: "❌ Fallo en ejecución GSIT_alertas",
                 body: """<p>El job <b>GSIT_alertas</b> ha fallado.</p>
                          <p>Revisa el log adjunto y las capturas para más detalles.</p>""",
-                to: "ecommerceoperacones@gmail.com",
+                to: "ecommerceoperacones01@gmail.com",
                 attachmentsPattern: "logs/*.log, screenshots/*.png"
             )
         }
