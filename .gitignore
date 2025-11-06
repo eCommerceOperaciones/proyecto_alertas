@@ -11,3 +11,4 @@ screenshots/
 drivers/
 .vscode/
 local_main.py
+README.local
