@@ -31,41 +31,27 @@ node('main') {
 
             stage('Ejecutar script') {
                 sh """
-                    set +e
+                    set -e
                     ./venv/bin/python src/main.py "$WORKSPACE/profiles/selenium_cert"
-                    EXIT_CODE=$?
-                    echo "Python exit code: \$EXIT_CODE"
-                    exit \$EXIT_CODE
                 """
             }
 
-            // ← QUITADO 'steps {}'
             stage('Verificar estado') {
                 script {
-                    def rootStatus = "${WORKSPACE}/status.txt"
-                    if (!fileExists(rootStatus)) {
-                        error("No se encontró status.txt en la raíz")
-                    }
-
-                    def status = readFile(rootStatus).trim()
-                    echo "Estado: ${status}"
-
+                    def statusFile = sh(script: "find runs -name status.txt | head -n 1", returnStdout: true).trim()
+                    def status = readFile(statusFile).trim()
                     if (status == "falso_positivo") {
-                        currentBuild.result = 'SUCCESS'
-                        echo "Falso positivo. Reintentando en 5 min..."
-                        sleep(time: 5, unit: 'MINUTES')
-                        build job: env.JOB_NAME, wait: false, quietPeriod: 10
+                        echo "Falso positivo detectado. Programando reintento en 5 minutos..."
+                        sleep(time: 5, unit: "MINUTES")
+                        build job: env.JOB_NAME, wait: false
                     } else if (status == "alarma_confirmada") {
                         currentBuild.result = 'FAILURE'
-                    } else {
-                        currentBuild.result = 'FAILURE'
-                        error("Estado desconocido: ${status}")
                     }
                 }
             }
         } catch (err) {
             currentBuild.result = 'FAILURE'
-            echo "Error: ${err}"
+            echo "❌ Error: ${err}"
         } finally {
             stage('Post - Archivar y Notificar') {
                 def run_id = readFile("${WORKSPACE}/current_run.txt").trim()
@@ -73,13 +59,12 @@ node('main') {
 
                 if (currentBuild.result == 'FAILURE') {
                     emailext(
-                        subject: "Alarma ACCES FRONTAL EMD confirmada",
-                        body: "<p>Alarma REAL. Revisar logs y capturas.</p>",
+                        subject: "🚨 Alarma ACCES FRONTAL EMD confirmada",
+                        body: """<p>Se ha confirmado la alarma ACCES FRONTAL EMD.</p>
+                                 <p>Revisa la carpeta de ejecución para logs y capturas.</p>""",
                         to: "ecommerceoperaciones01@gmail.com",
                         attachmentsPattern: "runs/${run_id}/logs/*.log, runs/${run_id}/screenshots/*.png"
                     )
-                } else {
-                    echo "Falso positivo. Sin email."
                 }
             }
         }

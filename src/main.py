@@ -262,15 +262,13 @@ def run_automation():
         # 3. Dades i documents
         if not click_with_wait(driver, By.ID, "apt_did", "Dades i documents"):
             driver.quit()
-            return False
-        time.sleep(3)  # Espera extra post-navegación
-        wait_for_loaders(driver, timeout=30)
-
-        # 4. Els meus documents → POR TEXTO (más robusto)
-        if not click_with_wait(driver, By.XPATH, "//a[contains(text(), 'Els meus documents') or contains(., 'Els meus documents')]", "Els meus documents"):
-            driver.quit()
-            return False
+            sys.exit(1)
         
+
+        # 4. Els meus documents
+        if not click_with_wait(driver, By.XPATH, '//*[@id="center_1R"]/app-root/app-home/div/div[2]/div[2]/h3/a', "Els meus documents"):
+            driver.quit()
+            sys.exit(1)
         
 
         # 5. Final: lista documentos
