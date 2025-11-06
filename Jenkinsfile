@@ -1,4 +1,14 @@
 node('main') {
+
+    // ✅ Declaramos el parámetro para controlar reintentos (solo si no existe)
+    if (!params.RETRY_COUNT) {
+        properties([
+            parameters([
+                string(name: 'RETRY_COUNT', defaultValue: '0', description: 'Número de reintentos del pipeline')
+            ])
+        ])
+    }
+
     withCredentials([
         usernamePassword(
             credentialsId: 'email-alertas-user',
@@ -11,6 +21,7 @@ node('main') {
             passwordVariable: 'JENKINS_CREDS_PSW'
         )
     ]) {
+
         try {
 
             stage('Checkout') {
@@ -39,24 +50,36 @@ node('main') {
 
             stage('Verificar estado') {
                 script {
-                    // ✅ Leer SIEMPRE el archivo raíz generado por main.py
+
                     def statusFile = "${WORKSPACE}/status.txt"
                     def status = readFile(statusFile).trim()
 
-                    echo "Estado detectado: ${status}"
+                    echo "✅ Estado detectado: ${status}"
+                    echo "🔄 Reintentos realizados: ${params.RETRY_COUNT}"
 
                     if (status == "falso_positivo") {
-                        echo "✅ Falso positivo detectado. Reintento único en 5 minutos..."
 
-                        // ✅ No marcar fallo
+                        if (params.RETRY_COUNT.toInteger() >= 1) {
+                            echo "✅ Ya se realizó un reintento previamente. No se ejecutará de nuevo."
+                            return
+                        }
+
+                        echo "⚠ Falso positivo detectado. Programando único reintento en 5 minutos..."
+
                         currentBuild.result = 'SUCCESS'
 
-                        // ✅ Programar reintento sin bucles infinitos
                         sleep(time: 5, unit: "MINUTES")
-                        build job: env.JOB_NAME, wait: false
+
+                        build(
+                            job: env.JOB_NAME,
+                            parameters: [
+                                string(name: 'RETRY_COUNT', value: (params.RETRY_COUNT.toInteger() + 1).toString())
+                            ],
+                            wait: false
+                        )
                     }
                     else if (status == "alarma_confirmada") {
-                        echo "🚨 Alarma REAL confirmada"
+                        echo "🚨 Alarma REAL confirmada."
                         currentBuild.result = 'FAILURE'
                     }
                     else {
@@ -74,10 +97,8 @@ node('main') {
 
             stage('Post - Archivar y Notificar') {
                 def run_id = readFile("${WORKSPACE}/current_run.txt").trim()
-
                 archiveArtifacts artifacts: "runs/${run_id}/**", allowEmptyArchive: true
 
-                // ✅ Solo envía correo si realmete hubo alarma confirmada
                 if (currentBuild.result == 'FAILURE') {
                     emailext(
                         subject: "🚨 Alarma ACCES FRONTAL EMD confirmada",
