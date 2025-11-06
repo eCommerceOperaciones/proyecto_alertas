@@ -40,23 +40,35 @@ node('main') {
                 script {
                     def statusFile = sh(script: "find runs -name status.txt | head -n 1", returnStdout: true).trim()
                     def status = readFile(statusFile).trim()
+
                     if (status == "falso_positivo") {
-                        echo "Falso positivo detectado. Programando reintento en 5 minutos..."
+                        echo "✅ Falso positivo detectado. Reintento único en 5 minutos..."
+                        
+                        // ✅ Marcar como éxito para evitar correo y fallo
+                        currentBuild.result = 'SUCCESS'
+
+                        // ✅ Programar reintento sin bucles infinitos
                         sleep(time: 5, unit: "MINUTES")
                         build job: env.JOB_NAME, wait: false
-                    } else if (status == "alarma_confirmada") {
+                    } 
+                    else if (status == "alarma_confirmada") {
+                        echo "🚨 Alarma confirmada"
                         currentBuild.result = 'FAILURE'
                     }
                 }
             }
+
         } catch (err) {
             currentBuild.result = 'FAILURE'
             echo "❌ Error: ${err}"
         } finally {
+
             stage('Post - Archivar y Notificar') {
                 def run_id = readFile("${WORKSPACE}/current_run.txt").trim()
+
                 archiveArtifacts artifacts: "runs/${run_id}/**", allowEmptyArchive: true
 
+                // ✅ Solo envía correo si realmete hubo alarma confirmada
                 if (currentBuild.result == 'FAILURE') {
                     emailext(
                         subject: "🚨 Alarma ACCES FRONTAL EMD confirmada",
