@@ -166,10 +166,8 @@ def run_automation():
         if not click_btn_cert(driver):
             return False
 
-        # Aquí asumimos que el overlay es un loader con clase .NG-loader o similar
-        if not click_element(driver, By.ID, "apt_did", "Elemento 'Dades i documents' no encontrado", overlay_selector=".NG-loader"):
+        if not click_element(driver, By.ID, "apt_did", "Elemento 'Dades i documents' no encontrado"):
             return False
-
 
         if not click_element(driver, By.XPATH, '//*[@id="center_1R"]/app-root/app-home/div/div[2]/div[2]/h3/a', "Link 'Els meus documents' no encontrado"):
             return False
