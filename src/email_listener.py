@@ -31,7 +31,7 @@ JOB_NAME = os.getenv("JOB_NAME", "GSIT_alertas")
 ALERTS = {
     "ACCES FRONTAL EMD": {
         "from": "rpinheiro@viewnext.com",
-        "script": "main.py"
+        "script": "acces_frontal_emd"
     },
 
     # Ejemplo futura alerta:
