@@ -239,13 +239,13 @@ def run_automation():
         log("info", f"URL: {ACCES_FRONTAL_EMD_URL}")
         driver.get(ACCES_FRONTAL_EMD_URL)
         WebDriverWait(driver, 30).until(lambda d: d.execute_script("return document.readyState") == "complete")
-        save_screenshot(driver, "01_inicio")
+        
 
         # 1. Shadow: "Soc un ciutadà/ana"
         if not click_with_wait(driver, None, None, "Botón 'Soc un ciutadà/ana'", shadow=True):
             driver.quit()
             sys.exit(1)
-        save_screenshot(driver, "02_shadow")
+        
 
         # 2. Certificado digital
         if not click_btn_cert(driver):
@@ -255,7 +255,6 @@ def run_automation():
             send_alert_email(screenshot, "No se pudo seleccionar certificado digital")
             driver.quit()
             sys.exit(1)
-        save_screenshot(driver, "03_cert_ok")
         log("info", "Esperando 5 segundos extra post-certificado...")
         time.sleep(5)
         wait_for_loaders(driver, timeout=30)  # Forzar espera larga
@@ -264,13 +263,13 @@ def run_automation():
         if not click_with_wait(driver, By.ID, "apt_did", "Dades i documents"):
             driver.quit()
             sys.exit(1)
-        save_screenshot(driver, "04_dades")
+        
 
         # 4. Els meus documents
         if not click_with_wait(driver, By.XPATH, '//*[@id="center_1R"]/app-root/app-home/div/div[2]/div[2]/h3/a', "Els meus documents"):
             driver.quit()
             sys.exit(1)
-        save_screenshot(driver, "05_docs")
+        
 
         # 5. Final: lista documentos
         log("info", "Esperando documentos...")
