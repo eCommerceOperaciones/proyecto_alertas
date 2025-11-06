@@ -37,46 +37,29 @@ node('main') {
             }
 
             stage('Verificar estado') {
-                script {
-                    def statusFile = sh(script: "find runs -name status.txt | head -n 1", returnStdout: true).trim()
-                    def status = readFile(statusFile).trim()
+    script {
 
-                    if (status == "falso_positivo") {
-                        echo "✅ Falso positivo detectado. Reintento único en 5 minutos..."
-                        
-                        // ✅ Marcar como éxito para evitar correo y fallo
-                        currentBuild.result = 'SUCCESS'
+        // ✅ Leer SIEMPRE el archivo raíz generado por main.py
+        def statusFile = "${WORKSPACE}/status.txt"
+        def status = readFile(statusFile).trim()
 
-                        // ✅ Programar reintento sin bucles infinitos
-                        sleep(time: 5, unit: "MINUTES")
-                        build job: env.JOB_NAME, wait: false
-                    } 
-                    else if (status == "alarma_confirmada") {
-                        echo "🚨 Alarma confirmada"
-                        currentBuild.result = 'FAILURE'
-                    }
-                }
-            }
+        echo "Estado detectado: ${status}"
 
-        } catch (err) {
+        if (status == "falso_positivo") {
+            echo "✅ Falso positivo detectado. Reintento único en 5 minutos..."
+            currentBuild.result = 'SUCCESS'
+
+            sleep(time: 5, unit: "MINUTES")
+            build job: env.JOB_NAME, wait: false
+        }
+        else if (status == "alarma_confirmada") {
+            echo "🚨 Alarma REAL confirmada"
             currentBuild.result = 'FAILURE'
-            echo "❌ Error: ${err}"
-        } finally {
-
-            stage('Post - Archivar y Notificar') {
-                def run_id = readFile("${WORKSPACE}/current_run.txt").trim()
-
-                archiveArtifacts artifacts: "runs/${run_id}/**", allowEmptyArchive: true
-
-                // ✅ Solo envía correo si realmete hubo alarma confirmada
-                if (currentBuild.result == 'FAILURE') {
-                    emailext(
-                        subject: "🚨 Alarma ACCES FRONTAL EMD confirmada",
-                        body: """<p>Se ha confirmado la alarma ACCES FRONTAL EMD.</p>
-                                 <p>Revisa la carpeta de ejecución para logs y capturas.</p>""",
-                        to: "ecommerceoperaciones01@gmail.com",
-                        attachmentsPattern: "runs/${run_id}/logs/*.log, runs/${run_id}/screenshots/*.png"
-                    )
+        }
+        else {
+            echo "⚠ Estado desconocido: ${status}"
+            currentBuild.result = 'FAILURE'
+        }
                 }
             }
         }
