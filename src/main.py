@@ -306,4 +306,17 @@ def run_automation():
 
 if __name__ == "__main__":
     success = run_automation()
-    sys.exit(0 if success else 1)
+    final_status = "falso_positivo" if success else "alarma_confirmada"
+    
+    # Escribir en logs y en raíz
+    with open(os.path.join(logs_dir, "status.txt"), "w") as f:
+        f.write(final_status)
+    with open(os.path.join(WORKSPACE, "status.txt"), "w") as f:
+        f.write(final_status)
+
+    if success:
+        log("info", "=== EJECUCIÓN COMPLETADA CON ÉXITO ===")
+        sys.exit(0)
+    else:
+        log("error", "=== ALARMA CONFIRMADA ===")
+        sys.exit(1)
