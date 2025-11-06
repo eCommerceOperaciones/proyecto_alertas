@@ -28,7 +28,7 @@ JOB_NAME = os.getenv("JOB_NAME", "GSIT_alertas")
 ACCES_FRONTAL_EMD_URL = os.getenv("ACCES_FRONTAL_EMD_URL")
 DEFAULT_WAIT = int(os.getenv("DEFAULT_WAIT", "10"))
 
-# ✅ CORRECCIÓN: Inicializar FIREFOX_PROFILE_PATH
+# ✅ CORRECCION: Inicializar FIREFOX_PROFILE_PATH
 FIREFOX_PROFILE_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(WORKSPACE, "profiles", "selenium_cert")
 
 # =========================
@@ -88,7 +88,12 @@ def click_shadow_element(driver, script: str, error_message="Error al acceder al
 
 def click_element(driver, by, value, description) -> bool:
     try:
-        WebDriverWait(driver, DEFAULT_WAIT).until(EC.element_to_be_clickable((by, value)))
+        WebDriverWait(driver, DEFAULT_WAIT).until(
+            EC.visibility_of_element_located((by, value))
+        )
+        WebDriverWait(driver, DEFAULT_WAIT).until(
+            EC.element_to_be_clickable((by, value))
+        )
         elem = driver.find_element(by, value)
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
         time.sleep(0.5)
@@ -137,7 +142,16 @@ def run_automation():
     try:
         log("info", f"Accediendo a: {ACCES_FRONTAL_EMD_URL}")
         driver.get(ACCES_FRONTAL_EMD_URL)
-        WebDriverWait(driver, DEFAULT_WAIT).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+
+        # Espera a que el DOM esté completamente cargado
+        WebDriverWait(driver, DEFAULT_WAIT * 3).until(
+            lambda d: d.execute_script("return document.readyState") == "complete"
+        )
+        log("info", "Página cargada y DOM listo.")
+
+        WebDriverWait(driver, DEFAULT_WAIT).until(
+            EC.presence_of_element_located((By.TAG_NAME, "body"))
+        )
         log("info", "Página cargada correctamente.")
 
         shadow_query = (
