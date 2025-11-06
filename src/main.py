@@ -1,4 +1,3 @@
-# src/main.py
 import os
 import sys
 import time
@@ -34,7 +33,7 @@ DEFAULT_WAIT = int(os.getenv("DEFAULT_WAIT", "15"))
 FIREFOX_PROFILE_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(WORKSPACE, "profiles", "selenium_cert")
 
 # =========================
-# Carpetas por ejecución
+# Carpetas
 # =========================
 run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
 run_dir = os.path.join(WORKSPACE, "runs", run_id)
@@ -43,7 +42,6 @@ logs_dir = os.path.join(run_dir, "logs")
 os.makedirs(screenshots_dir, exist_ok=True)
 os.makedirs(logs_dir, exist_ok=True)
 
-# Guardar run_id
 with open(os.path.join(WORKSPACE, "current_run.txt"), "w") as f:
     f.write(run_id)
 
@@ -64,11 +62,11 @@ def save_screenshot(driver, name: str) -> str:
     return filename
 
 # =========================
-# Email (solo alarma real)
+# Email
 # =========================
 def send_alert_email(screenshot_path: str, error_msg: str):
     if not EMAIL_USER or not EMAIL_PASS:
-        log("warn", "Credenciales de email no configuradas.")
+        log("warn", "Email no configurado.")
         return
 
     subject = "ALERTA REAL: ACCES FRONTAL EMD"
@@ -96,9 +94,9 @@ def send_alert_email(screenshot_path: str, error_msg: str):
         server.login(EMAIL_USER, EMAIL_PASS)
         server.send_message(msg)
         server.quit()
-        log("info", "Email de alerta enviado.")
+        log("info", "Email enviado.")
     except Exception as e:
-        log("error", f"Error enviando email: {e}")
+        log("error", f"Email falló: {e}")
 
 # =========================
 # Driver
@@ -123,70 +121,81 @@ def setup_driver() -> webdriver.Firefox:
     return driver
 
 # =========================
-# Espera loaders/overlays
+# Espera loaders
 # =========================
 def wait_for_loaders(driver, timeout=DEFAULT_WAIT):
-    selectors = [
+    """Espera a que desaparezcan loaders, spinners y overlays."""
+    loaders_selectors = [
         ".spinner", ".loading", ".loader", "[class*='spinner']", "[class*='loading']",
         "app-root[loading]", "div[id*='loader']", ".overlay", ".blocker",
         "body > div[style*='block']", "div[role='dialog']", ".modal-backdrop"
     ]
     try:
-        for sel in selectors:
+        for selector in loaders_selectors:
             try:
-                WebDriverWait(driver, 2).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, sel)))
+                WebDriverWait(driver, 2).until(
+                    EC.invisibility_of_element_located((By.CSS_SELECTOR, selector))
+                )
             except:
                 continue
         log("info", "Loaders/Overlays desaparecidos.")
     except:
-        log("warn", "Timeout esperando loaders, continuando...")
+        log("warn", "Timeout esperando loaders, pero continuamos...")
 
 # =========================
-# Clic con espera + JS fallback
+# Clic con espera
 # =========================
 def click_with_wait(driver, by, selector, description, iframe=False, shadow=False):
     try:
-        wait_for_loaders(driver, timeout=30)
+        wait_for_loaders(driver, timeout=20)  # Más tiempo
 
         if shadow:
             script = 'return document.querySelector("#single-spa-application\\\\:mfe-main-app > app-root").shadowRoot.querySelector("main > app-acces > div > div.left > button")'
-            WebDriverWait(driver, 30).until(lambda d: d.execute_script(script))
+            WebDriverWait(driver, DEFAULT_WAIT).until(lambda d: d.execute_script(script))
             elem = driver.execute_script(script)
         elif iframe:
-            iframe_elem = WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.TAG_NAME, "iframe")))
+            iframe_elem = WebDriverWait(driver, DEFAULT_WAIT).until(
+                EC.presence_of_element_located((By.TAG_NAME, "iframe"))
+            )
             driver.switch_to.frame(iframe_elem)
-            elem = WebDriverWait(driver, 30).until(EC.presence_of_element_located((by, selector)))
+            elem = WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located((by, selector))  # Solo presence
+            )
         else:
-            elem = WebDriverWait(driver, 30).until(EC.presence_of_element_located((by, selector)))
-            WebDriverWait(driver, 30).until(EC.visibility_of_element_located((by, selector)))
+            # Esperar presencia + visibility
+            elem = WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located((by, selector))
+            )
+            WebDriverWait(driver, 30).until(
+                EC.visibility_of_element_located((by, selector))
+            )
 
+        # Scroll
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
         time.sleep(1)
 
+        # Intentar clic normal, si falla → JS
         try:
             elem.click()
-            log("info", f"Clic normal: {description}")
+            log("info", f"✓ Clic normal: {description}")
         except:
-            log("warn", f"Clic normal falló → JS: {description}")
+            log("warn", f"Clic normal falló, usando JS para: {description}")
             driver.execute_script("arguments[0].click();", elem)
-            log("info", f"Clic con JS: {description}")
+            log("info", f"✓ Clic con JS: {description}")
 
         if iframe:
             driver.switch_to.default_content()
         return True
+
     except Exception as e:
-        log("error", f"Fallo total: {description} | {e}")
+        log("error", f"✗ Fallo total: {description} | {e}")
         screenshot = save_screenshot(driver, f"error_{description.replace(' ', '_')}")
-        final_status = "alarma_confirmada"
         with open(os.path.join(logs_dir, "status.txt"), "w") as f:
-            f.write(final_status)
-        with open(os.path.join(WORKSPACE, "status.txt"), "w") as f:
-            f.write(final_status)
+            f.write("alarma_confirmada")
         send_alert_email(screenshot, f"No se pudo interactuar: {description}")
         return False
-
 # =========================
-# Certificado digital
+# Certificado (100% funcional)
 # =========================
 def click_btn_cert(driver) -> bool:
     try:
@@ -230,41 +239,39 @@ def run_automation():
         log("info", f"URL: {ACCES_FRONTAL_EMD_URL}")
         driver.get(ACCES_FRONTAL_EMD_URL)
         WebDriverWait(driver, 30).until(lambda d: d.execute_script("return document.readyState") == "complete")
-        save_screenshot(driver, "01_inicio")
+        
 
         # 1. Shadow: "Soc un ciutadà/ana"
         if not click_with_wait(driver, None, None, "Botón 'Soc un ciutadà/ana'", shadow=True):
             driver.quit()
-            return False
-        save_screenshot(driver, "02_shadow")
+            sys.exit(1)
+        
 
-        # 2. Certificado
+        # 2. Certificado digital
         if not click_btn_cert(driver):
             screenshot = save_screenshot(driver, "03_cert_fallo")
-            final_status = "alarma_confirmada"
             with open(os.path.join(logs_dir, "status.txt"), "w") as f:
-                f.write(final_status)
-            with open(os.path.join(WORKSPACE, "status.txt"), "w") as f:
-                f.write(final_status)
-            send_alert_email(screenshot, "No se pudo seleccionar certificado")
+                f.write("alarma_confirmada")
+            send_alert_email(screenshot, "No se pudo seleccionar certificado digital")
             driver.quit()
-            return False
-        save_screenshot(driver, "03_cert_ok")
-        log("info", "Post-certificado: espera adicional...")
+            sys.exit(1)
+        log("info", "Esperando 5 segundos extra post-certificado...")
         time.sleep(5)
-        wait_for_loaders(driver, timeout=30)
+        wait_for_loaders(driver, timeout=30)  # Forzar espera larga
 
         # 3. Dades i documents
         if not click_with_wait(driver, By.ID, "apt_did", "Dades i documents"):
             driver.quit()
             return False
-        save_screenshot(driver, "04_dades")
+        time.sleep(3)  # Espera extra post-navegación
+        wait_for_loaders(driver, timeout=30)
 
-        # 4. Els meus documents
-        if not click_with_wait(driver, By.XPATH, '//*[@id="center_1R"]/app-root/app-home/div/div[2]/div[2]/h3/a', "Els meus documents"):
+        # 4. Els meus documents → POR TEXTO (más robusto)
+        if not click_with_wait(driver, By.XPATH, "//a[contains(text(), 'Els meus documents') or contains(., 'Els meus documents')]", "Els meus documents"):
             driver.quit()
             return False
-        save_screenshot(driver, "05_docs")
+        
+        
 
         # 5. Final: lista documentos
         log("info", "Esperando documentos...")
@@ -274,15 +281,14 @@ def run_automation():
             )
             log("info", "FLUJOS OK - Falso positivo")
             save_screenshot(driver, "06_final_ok")
+            with open(os.path.join(logs_dir, "status.txt"), "w") as f:
+                f.write("falso_positivo")
             return True
         except:
             log("error", "ALERTA REAL: No cargaron documentos")
             screenshot = save_screenshot(driver, "alarma_real")
-            final_status = "alarma_confirmada"
             with open(os.path.join(logs_dir, "status.txt"), "w") as f:
-                f.write(final_status)
-            with open(os.path.join(WORKSPACE, "status.txt"), "w") as f:
-                f.write(final_status)
+                f.write("alarma_confirmada")
             send_alert_email(screenshot, "No se cargó la lista de documentos")
             return False
 
@@ -290,34 +296,31 @@ def run_automation():
         log("error", f"Error crítico: {e}")
         try:
             screenshot = save_screenshot(driver, "error_critico")
-            final_status = "alarma_confirmada"
             with open(os.path.join(logs_dir, "status.txt"), "w") as f:
-                f.write(final_status)
-            with open(os.path.join(WORKSPACE, "status.txt"), "w") as f:
-                f.write(final_status)
+                f.write("alarma_confirmada")
             send_alert_email(screenshot, f"Error: {e}")
         except:
             pass
         return False
     finally:
         driver.quit()
-        log("info", "Driver cerrado.")
 
 if __name__ == "__main__":
     success = run_automation()
     final_status = "falso_positivo" if success else "alarma_confirmada"
-
-    # En logs (histórico)
+    
+    # 1. En logs (para histórico)
     with open(os.path.join(logs_dir, "status.txt"), "w") as f:
         f.write(final_status)
-
-    # EN RAÍZ (Jenkins)
-    with open(os.path.join(WORKSPACE, "status.txt"), "w") as f:
+    
+    # 2. EN RAÍZ (para Jenkins)
+    root_status_path = os.path.join(WORKSPACE, "status.txt")
+    with open(root_status_path, "w") as f:
         f.write(final_status)
-
+    
     if success:
-        log("info", "=== EJECUCIÓN COMPLETADA CON ÉXITO ===")
+        log("info", "=== JOB SUCCESS: falso_positivo ===")
         sys.exit(0)
     else:
-        log("error", "=== ALARMA CONFIRMADA ===")
+        log("error", "=== JOB FAILURE: alarma_confirmada ===")
         sys.exit(1)
