@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import platform
 from datetime import datetime
 from dotenv import load_dotenv
 from selenium import webdriver
@@ -25,18 +26,14 @@ if os.path.exists(ENV_PATH):
 WORKSPACE = os.getenv("WORKSPACE", os.getcwd())
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
-JENKINS_USER = os.getenv("JENKINS_USER")
-JENKINS_TOKEN = os.getenv("JENKINS_TOKEN")
-JENKINS_URL = os.getenv("JENKINS_URL", "http://localhost:8080")
-JOB_NAME = os.getenv("JOB_NAME", "GSIT_alertas")
 ACCES_FRONTAL_EMD_URL = os.getenv("ACCES_FRONTAL_EMD_URL")
-DEFAULT_WAIT = int(os.getenv("DEFAULT_WAIT", "15"))  # Aumentado para estabilidad
+DEFAULT_WAIT = int(os.getenv("DEFAULT_WAIT", "15"))
 
-# Perfil de Firefox
+# Perfil (Jenkins o local)
 FIREFOX_PROFILE_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(WORKSPACE, "profiles", "selenium_cert")
 
 # =========================
-# Carpetas por ejecución
+# Carpetas
 # =========================
 run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
 run_dir = os.path.join(WORKSPACE, "runs", run_id)
@@ -61,7 +58,7 @@ def log(level: str, message: str) -> None:
 def save_screenshot(driver, name: str) -> str:
     filename = os.path.join(screenshots_dir, f"{name}.png")
     driver.save_screenshot(filename)
-    log("info", f"Captura guardada: {filename}")
+    log("info", f"Captura: {filename}")
     return filename
 
 # =========================
@@ -69,51 +66,52 @@ def save_screenshot(driver, name: str) -> str:
 # =========================
 def send_alert_email(screenshot_path: str, error_msg: str):
     if not EMAIL_USER or not EMAIL_PASS:
-        log("warn", "Credenciales de correo no configuradas. No se enviará email.")
+        log("warn", "Email no configurado.")
         return
 
-    subject = f"ALERTA REAL: ACCES FRONTAL EMD - Revisión urgente"
+    subject = "ALERTA REAL: ACCES FRONTAL EMD"
     body = f"""
-    <h3>Se ha detectado una <strong>alarma real</strong> en ACCES FRONTAL EMD.</h3>
-    <p><strong>Detalles:</strong> {error_msg}</p>
-    <p><strong>Run ID:</strong> {run_id}</p>
-    <p>Por favor, revise el sistema lo antes posible.</p>
-    <p><em>Este es un mensaje automático desde el monitor GSIT_alertas.</em></p>
+    <h3>Alarma REAL detectada</h3>
+    <p><strong>Error:</strong> {error_msg}</p>
+    <p><strong>Run:</strong> {run_id}</p>
+    <p>Revise urgentemente.</p>
     """
 
     msg = MIMEMultipart()
     msg['From'] = EMAIL_USER
-    msg['To'] = EMAIL_USER  # Cambia si quieres otro destinatario
+    msg['To'] = EMAIL_USER
     msg['Subject'] = subject
-
     msg.attach(MIMEText(body, 'html'))
 
-    # Adjuntar imagen
     with open(screenshot_path, 'rb') as f:
-        img = MIMEImage(f.read(), name=os.path.basename(screenshot_path))
+        img = MIMEImage(f.read())
+        img.add_header('Content-Disposition', 'attachment', filename=os.path.basename(screenshot_path))
         msg.attach(img)
 
     try:
-        server = smtplib.SMTP('smtp.gmail.com', 587)  # Cambia si usas otro servidor
+        server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
         server.login(EMAIL_USER, EMAIL_PASS)
         server.send_message(msg)
         server.quit()
-        log("info", "Email de alerta enviado correctamente.")
+        log("info", "Email enviado.")
     except Exception as e:
-        log("error", f"Error enviando email: {e}")
+        log("error", f"Email falló: {e}")
 
 # =========================
 # Driver
 # =========================
 def setup_driver() -> webdriver.Firefox:
     if not os.path.exists(FIREFOX_PROFILE_PATH):
-        raise FileNotFoundError(f"Perfil de Firefox no encontrado: {FIREFOX_PROFILE_PATH}")
+        raise FileNotFoundError(f"Perfil no encontrado: {FIREFOX_PROFILE_PATH}")
 
     options = Options()
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--window-size=1920,1080")
+
     profile = webdriver.FirefoxProfile(FIREFOX_PROFILE_PATH)
     options.profile = profile
 
@@ -123,36 +121,90 @@ def setup_driver() -> webdriver.Firefox:
     return driver
 
 # =========================
-# Click con espera
+# Espera loaders
 # =========================
-def click_with_wait(driver, by, selector, description, timeout=DEFAULT_WAIT, shadow=False):
+def wait_for_loaders(driver):
     try:
+        WebDriverWait(driver, DEFAULT_WAIT).until(
+            EC.invisibility_of_element_located((By.CSS_SELECTOR, ".spinner, .loading, .loader, [class*='spinner']"))
+        )
+        log("info", "Loaders desaparecidos.")
+    except:
+        log("warn", "No se detectaron loaders o no desaparecieron.")
+
+# =========================
+# Clic con espera
+# =========================
+def click_with_wait(driver, by, selector, description, iframe=False, shadow=False):
+    try:
+        wait_for_loaders(driver)
+
         if shadow:
-            script = f"""
-            return document.querySelector("#single-spa-application\\\\:mfe-main-app > app-root")
-                .shadowRoot.querySelector("main > app-acces > div > div.left > button");
-            """
-            WebDriverWait(driver, timeout).until(
-                lambda d: d.execute_script(script) is not None
+            script = 'return document.querySelector("#single-spa-application\\\\:mfe-main-app > app-root").shadowRoot.querySelector("main > app-acces > div > div.left > button")'
+            WebDriverWait(driver, DEFAULT_WAIT).until(lambda d: d.execute_script(script))
+            elem = driver.execute_script(script)
+        elif iframe:
+            iframe_elem = WebDriverWait(driver, DEFAULT_WAIT).until(
+                EC.presence_of_element_located((By.TAG_NAME, "iframe"))
             )
-            element = driver.execute_script(script)
-        else:
-            WebDriverWait(driver, timeout).until(
+            driver.switch_to.frame(iframe_elem)
+            elem = WebDriverWait(driver, DEFAULT_WAIT).until(
                 EC.element_to_be_clickable((by, selector))
             )
-            element = driver.find_element(by, selector)
+        else:
+            elem = WebDriverWait(driver, DEFAULT_WAIT).until(
+                EC.element_to_be_clickable((by, selector))
+            )
 
-        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
-        time.sleep(0.5)
-        element.click()
-        log("info", f"✓ Clic en: {description}")
+        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
+        time.sleep(0.8)
+        elem.click()
+        log("info", f"✓ Clic: {description}")
+        if iframe:
+            driver.switch_to.default_content()
         return True
     except Exception as e:
-        log("error", f"✗ No se encontró o no clickable: {description} | Error: {e}")
+        log("error", f"✗ Fallo: {description} | {e}")
         screenshot = save_screenshot(driver, f"error_{description.replace(' ', '_')}")
         with open(os.path.join(logs_dir, "status.txt"), "w") as f:
             f.write("alarma_confirmada")
-        send_alert_email(screenshot, f"Falló al hacer clic en: {description}")
+        send_alert_email(screenshot, f"No se pudo clicar: {description}")
+        return False
+
+# =========================
+# Certificado (100% funcional)
+# =========================
+def click_btn_cert(driver) -> bool:
+    try:
+        wait_for_loaders(driver)
+        try:
+            elem = WebDriverWait(driver, DEFAULT_WAIT).until(
+                EC.presence_of_element_located((By.ID, "btnContinuaCertCaptcha"))
+            )
+            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
+            time.sleep(1)
+            driver.execute_script("arguments[0].click();", elem)
+            log("info", "Certificado clicado (DOM principal).")
+            return True
+        except:
+            log("warn", "Buscando en iframes...")
+
+        for iframe in driver.find_elements(By.TAG_NAME, "iframe"):
+            driver.switch_to.frame(iframe)
+            try:
+                elem = WebDriverWait(driver, 5).until(
+                    EC.presence_of_element_located((By.ID, "btnContinuaCertCaptcha"))
+                )
+                driver.execute_script("arguments[0].click();", elem)
+                log("info", "Certificado clicado en iframe.")
+                driver.switch_to.default_content()
+                return True
+            except:
+                driver.switch_to.default_content()
+        return False
+    except Exception as e:
+        log("error", f"Error certificado: {e}")
+        save_screenshot(driver, "error_cert")
         return False
 
 # =========================
@@ -161,81 +213,70 @@ def click_with_wait(driver, by, selector, description, timeout=DEFAULT_WAIT, sha
 def run_automation():
     driver = setup_driver()
     try:
-        log("info", f"Accediendo a: {ACCES_FRONTAL_EMD_URL}")
+        log("info", f"URL: {ACCES_FRONTAL_EMD_URL}")
         driver.get(ACCES_FRONTAL_EMD_URL)
+        WebDriverWait(driver, 30).until(lambda d: d.execute_script("return document.readyState") == "complete")
+        save_screenshot(driver, "01_inicio")
 
-        WebDriverWait(driver, DEFAULT_WAIT * 3).until(
-            lambda d: d.execute_script("return document.readyState") == "complete"
-        )
-        log("info", "Página cargada completamente.")
-
-        # 1. Botón "Soc un ciutadà/ana" (Shadow DOM)
-        if not click_with_wait(
-            driver=driver,
-            by=None,
-            selector=None,
-            description="Botón 'Soc un ciutadà/ana'",
-            shadow=True
-        ):
+        # 1. Shadow: "Soc un ciutadà/ana"
+        if not click_with_wait(driver, None, None, "Botón 'Soc un ciutadà/ana'", shadow=True):
             driver.quit()
             sys.exit(1)
+        save_screenshot(driver, "02_shadow")
 
-        # 2. "Dades i documents" (ID: apt_did)
-        if not click_with_wait(
-            driver=driver,
-            by=By.ID,
-            selector="apt_did",
-            description="Elemento 'Dades i documents'"
-        ):
+        # 2. Certificado digital
+        if not click_btn_cert(driver):
+            screenshot = save_screenshot(driver, "03_cert_fallo")
+            with open(os.path.join(logs_dir, "status.txt"), "w") as f:
+                f.write("alarma_confirmada")
+            send_alert_email(screenshot, "No se pudo seleccionar certificado digital")
             driver.quit()
             sys.exit(1)
+        save_screenshot(driver, "03_cert_ok")
 
-        # 3. Link "Els meus documents"
-        if not click_with_wait(
-            driver=driver,
-            by=By.XPATH,
-            selector='//*[@id="center_1R"]/app-root/app-home/div/div[2]/div[2]/h3/a',
-            description="Link 'Els meus documents'"
-        ):
+        # 3. Dades i documents
+        if not click_with_wait(driver, By.ID, "apt_did", "Dades i documents"):
             driver.quit()
             sys.exit(1)
+        save_screenshot(driver, "04_dades")
 
-        save_screenshot(driver, "05_docs_click")
+        # 4. Els meus documents
+        if not click_with_wait(driver, By.XPATH, '//*[@id="center_1R"]/app-root/app-home/div/div[2]/div[2]/h3/a', "Els meus documents"):
+            driver.quit()
+            sys.exit(1)
+        save_screenshot(driver, "05_docs")
 
-        # 4. Esperar contenido final: lista de documentos
-        log("info", "Esperando carga final del contenido...")
+        # 5. Final: lista documentos
+        log("info", "Esperando documentos...")
         try:
-            WebDriverWait(driver, DEFAULT_WAIT * 3).until(
-                EC.visibility_of_element_located(
-                    (By.XPATH, '//*[@id="center_1R"]/app-root/app-emd/emd-home/emd-documents/div/emd-cards-view/ul/li[1]/div')
-                )
+            WebDriverWait(driver, DEFAULT_WAIT * 2).until(
+                EC.visibility_of_element_located((By.XPATH, '//*[@id="center_1R"]/app-root/app-emd/emd-home/emd-documents/div/emd-cards-view/ul/li[1]/div'))
             )
-            log("info", "✅ Flujo completado correctamente.")
-            final_screenshot = save_screenshot(driver, "06_final_ok")
+            log("info", "FLUJOS OK - Falso positivo")
+            save_screenshot(driver, "06_final_ok")
             with open(os.path.join(logs_dir, "status.txt"), "w") as f:
                 f.write("falso_positivo")
             return True
-        except Exception as e:
-            log("error", "Alarma ACCES FRONTAL EMD confirmada: no se cargaron los documentos.")
-            screenshot = save_screenshot(driver, "alarma_confirmada")
+        except:
+            log("error", "ALERTA REAL: No cargaron documentos")
+            screenshot = save_screenshot(driver, "alarma_real")
             with open(os.path.join(logs_dir, "status.txt"), "w") as f:
                 f.write("alarma_confirmada")
-            send_alert_email(screenshot, "No se cargó la lista de documentos. Alarma real.")
+            send_alert_email(screenshot, "No se cargó la lista de documentos")
             return False
 
     except Exception as e:
-        log("error", f"Error general en ejecución: {e}")
+        log("error", f"Error crítico: {e}")
         try:
-            screenshot = save_screenshot(driver, "error_general")
+            screenshot = save_screenshot(driver, "error_critico")
             with open(os.path.join(logs_dir, "status.txt"), "w") as f:
                 f.write("alarma_confirmada")
-            send_alert_email(screenshot, f"Error crítico: {e}")
+            send_alert_email(screenshot, f"Error: {e}")
         except:
             pass
         return False
     finally:
         driver.quit()
-        log("info", "Driver cerrado.")
 
 if __name__ == "__main__":
     success = run_automation()
