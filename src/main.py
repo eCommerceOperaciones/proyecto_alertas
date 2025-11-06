@@ -28,6 +28,9 @@ JOB_NAME = os.getenv("JOB_NAME", "GSIT_alertas")
 ACCES_FRONTAL_EMD_URL = os.getenv("ACCES_FRONTAL_EMD_URL")
 DEFAULT_WAIT = int(os.getenv("DEFAULT_WAIT", "10"))
 
+# ✅ CORRECCIÓN: Inicializar FIREFOX_PROFILE_PATH
+FIREFOX_PROFILE_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(WORKSPACE, "profiles", "selenium_cert")
+
 # =========================
 # Carpetas por ejecución
 # =========================
