@@ -6,7 +6,7 @@ node('main') {
     if (!params.SCRIPT_NAME || !params.RETRY_COUNT) {
         properties([
             parameters([
-                string(name: 'SCRIPT_NAME', defaultValue: 'emd_acces', description: 'Nombre lógico del script registrado en dispatcher (ej: emd_acces)'),
+                string(name: 'SCRIPT_NAME', defaultValue: 'acces_frontal_emd', description: 'Nombre lógico del script registrado en dispatcher (ej: acces_frontal_emd)'),
                 string(name: 'RETRY_COUNT',  defaultValue: '0',        description: 'Contador de reintentos automáticos (no tocar manualmente normalmente)')
             ])
         ])
@@ -28,7 +28,7 @@ node('main') {
 
         try {
             stage('Checkout') {
-                git branch: 'prueba-vscode', url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git'
+                git branch: 'Dev_Sondas', url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git'
             }
 
             stage('Preparar entorno') {
@@ -48,7 +48,7 @@ node('main') {
                 script {
                     // Ejecuta el dispatcher runner, pasando el nombre lógico del script
                     // runner.py se encargará de localizar y ejecutar el script real y escribir status.txt
-                    def scriptName = params.SCRIPT_NAME ?: 'emd_acces'
+                    def scriptName = params.SCRIPT_NAME ?: 'acces_frontal_emd'
                     echo "▶ Ejecutando runner para SCRIPT_NAME=${scriptName}"
                     sh """set -e
                         ./venv/bin/python src/runner.py --script "${scriptName}" --profile "$WORKSPACE/profiles/selenium_cert"
