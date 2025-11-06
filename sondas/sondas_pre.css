@@ -1,0 +1,90 @@
+body {
+  text-align: center;
+  background-color: aliceblue;
+}
+
+input[type="checkbox"], label {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+form label {
+  float: left;
+  text-align: left;
+
+}
+
+#titulo {
+  width: 20%;
+  vertical-align:top;
+  text-align: left;
+  display: inline-block;
+
+}
+
+#sondas {
+  justify-content: space-between;
+  text-align: left;
+  display: inline-block;
+  width: 60%;
+  vertical-align: top;
+  column-count: 4; /* se distribuyen los checkboxes en 2 columnas /
+  column-gap: 5%; / espacio entre columnas */
+  }
+  
+  #sondas input[type="checkbox"] {
+  display: inline-block;
+  vertical-align: middle;
+  }
+  
+  #contenedorTexto {
+    display: flex;
+    flex-direction: column;
+    justify-content: left;
+    align-items: left;
+    text-align: left;
+  }
+   
+  span {
+    line-height: 20px;
+    padding-bottom: 10px;
+    font-size: 17px;
+    font-weight: bold;
+    display: block;
+    text-align:left;
+}
+label{
+  float: left;
+  text-align: left;
+}
+#inputx{
+  float: left;
+  text-align: left;
+}
+
+#boton{
+  text-align: left;
+  float: left;
+  background-color: chartreuse;
+}
+
+.boton_copiar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+.boton_correo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+#sondas-generales {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
