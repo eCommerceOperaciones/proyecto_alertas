@@ -12,13 +12,20 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.firefox import GeckoDriverManager
 
 # =========================
-# Cargar configuración desde .env local
+# Cargar .env solo como respaldo
 # =========================
-load_dotenv(dotenv_path=os.path.join(os.getcwd(), ".env"))
+ENV_PATH = os.path.join(os.getcwd(), ".env")
+if os.path.exists(ENV_PATH):
+    load_dotenv(dotenv_path=ENV_PATH)
 
 WORKSPACE = os.getenv("WORKSPACE", os.getcwd())
+EMAIL_USER = os.getenv("EMAIL_USER")
+EMAIL_PASS = os.getenv("EMAIL_PASS")
+JENKINS_USER = os.getenv("JENKINS_USER")
+JENKINS_TOKEN = os.getenv("JENKINS_TOKEN")
+JENKINS_URL = os.getenv("JENKINS_URL", "http://localhost:8080")
+JOB_NAME = os.getenv("JOB_NAME", "GSIT_alertas")
 ACCES_FRONTAL_EMD_URL = os.getenv("ACCES_FRONTAL_EMD_URL")
-FIREFOX_PROFILE_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(WORKSPACE, "profiles", "selenium_cert")
 DEFAULT_WAIT = int(os.getenv("DEFAULT_WAIT", "10"))
 
 # =========================
@@ -30,6 +37,10 @@ screenshots_dir = os.path.join(run_dir, "screenshots")
 logs_dir = os.path.join(run_dir, "logs")
 os.makedirs(screenshots_dir, exist_ok=True)
 os.makedirs(logs_dir, exist_ok=True)
+
+# Guardar run_id para que Jenkins lo use
+with open(os.path.join(WORKSPACE, "current_run.txt"), "w") as f:
+    f.write(run_id)
 
 # =========================
 # Funciones auxiliares
