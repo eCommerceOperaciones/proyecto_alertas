@@ -12,6 +12,7 @@ node('main') {
         )
     ]) {
         try {
+
             stage('Checkout') {
                 git branch: 'prueba-vscode', url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git'
             }
@@ -37,29 +38,54 @@ node('main') {
             }
 
             stage('Verificar estado') {
-    script {
+                script {
+                    // ✅ Leer SIEMPRE el archivo raíz generado por main.py
+                    def statusFile = "${WORKSPACE}/status.txt"
+                    def status = readFile(statusFile).trim()
 
-        // ✅ Leer SIEMPRE el archivo raíz generado por main.py
-        def statusFile = "${WORKSPACE}/status.txt"
-        def status = readFile(statusFile).trim()
+                    echo "Estado detectado: ${status}"
 
-        echo "Estado detectado: ${status}"
+                    if (status == "falso_positivo") {
+                        echo "✅ Falso positivo detectado. Reintento único en 5 minutos..."
 
-        if (status == "falso_positivo") {
-            echo "✅ Falso positivo detectado. Reintento único en 5 minutos..."
-            currentBuild.result = 'SUCCESS'
+                        // ✅ No marcar fallo
+                        currentBuild.result = 'SUCCESS'
 
-            sleep(time: 5, unit: "MINUTES")
-            build job: env.JOB_NAME, wait: false
-        }
-        else if (status == "alarma_confirmada") {
-            echo "🚨 Alarma REAL confirmada"
+                        // ✅ Programar reintento sin bucles infinitos
+                        sleep(time: 5, unit: "MINUTES")
+                        build job: env.JOB_NAME, wait: false
+                    }
+                    else if (status == "alarma_confirmada") {
+                        echo "🚨 Alarma REAL confirmada"
+                        currentBuild.result = 'FAILURE'
+                    }
+                    else {
+                        echo "⚠ Estado desconocido: ${status}"
+                        currentBuild.result = 'FAILURE'
+                    }
+                }
+            }
+
+        } catch (err) {
             currentBuild.result = 'FAILURE'
-        }
-        else {
-            echo "⚠ Estado desconocido: ${status}"
-            currentBuild.result = 'FAILURE'
-        }
+            echo "❌ Error: ${err}"
+
+        } finally {
+
+            stage('Post - Archivar y Notificar') {
+                def run_id = readFile("${WORKSPACE}/current_run.txt").trim()
+
+                archiveArtifacts artifacts: "runs/${run_id}/**", allowEmptyArchive: true
+
+                // ✅ Solo envía correo si realmete hubo alarma confirmada
+                if (currentBuild.result == 'FAILURE') {
+                    emailext(
+                        subject: "🚨 Alarma ACCES FRONTAL EMD confirmada",
+                        body: """<p>Se ha confirmado la alarma ACCES FRONTAL EMD.</p>
+                                 <p>Revisa la carpeta de ejecución para logs y capturas.</p>""",
+                        to: "ecommerceoperaciones01@gmail.com",
+                        attachmentsPattern: "runs/${run_id}/logs/*.log, runs/${run_id}/screenshots/*.png"
+                    )
                 }
             }
         }
