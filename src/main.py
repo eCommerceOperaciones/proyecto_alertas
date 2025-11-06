@@ -123,21 +123,31 @@ def setup_driver() -> webdriver.Firefox:
 # =========================
 # Espera loaders
 # =========================
-def wait_for_loaders(driver):
+def wait_for_loaders(driver, timeout=DEFAULT_WAIT):
+    """Espera a que desaparezcan loaders, spinners y overlays."""
+    loaders_selectors = [
+        ".spinner", ".loading", ".loader", "[class*='spinner']", "[class*='loading']",
+        "app-root[loading]", "div[id*='loader']", ".overlay", ".blocker",
+        "body > div[style*='block']", "div[role='dialog']", ".modal-backdrop"
+    ]
     try:
-        WebDriverWait(driver, DEFAULT_WAIT).until(
-            EC.invisibility_of_element_located((By.CSS_SELECTOR, ".spinner, .loading, .loader, [class*='spinner']"))
-        )
-        log("info", "Loaders desaparecidos.")
+        for selector in loaders_selectors:
+            try:
+                WebDriverWait(driver, 2).until(
+                    EC.invisibility_of_element_located((By.CSS_SELECTOR, selector))
+                )
+            except:
+                continue
+        log("info", "Loaders/Overlays desaparecidos.")
     except:
-        log("warn", "No se detectaron loaders o no desaparecieron.")
+        log("warn", "Timeout esperando loaders, pero continuamos...")
 
 # =========================
 # Clic con espera
 # =========================
 def click_with_wait(driver, by, selector, description, iframe=False, shadow=False):
     try:
-        wait_for_loaders(driver)
+        wait_for_loaders(driver, timeout=20)  # Más tiempo
 
         if shadow:
             script = 'return document.querySelector("#single-spa-application\\\\:mfe-main-app > app-root").shadowRoot.querySelector("main > app-acces > div > div.left > button")'
@@ -148,29 +158,42 @@ def click_with_wait(driver, by, selector, description, iframe=False, shadow=Fals
                 EC.presence_of_element_located((By.TAG_NAME, "iframe"))
             )
             driver.switch_to.frame(iframe_elem)
-            elem = WebDriverWait(driver, DEFAULT_WAIT).until(
-                EC.element_to_be_clickable((by, selector))
+            elem = WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located((by, selector))  # Solo presence
             )
         else:
-            elem = WebDriverWait(driver, DEFAULT_WAIT).until(
-                EC.element_to_be_clickable((by, selector))
+            # Esperar presencia + visibility
+            elem = WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located((by, selector))
+            )
+            WebDriverWait(driver, 30).until(
+                EC.visibility_of_element_located((by, selector))
             )
 
+        # Scroll
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
-        time.sleep(0.8)
-        elem.click()
-        log("info", f"✓ Clic: {description}")
+        time.sleep(1)
+
+        # Intentar clic normal, si falla → JS
+        try:
+            elem.click()
+            log("info", f"✓ Clic normal: {description}")
+        except:
+            log("warn", f"Clic normal falló, usando JS para: {description}")
+            driver.execute_script("arguments[0].click();", elem)
+            log("info", f"✓ Clic con JS: {description}")
+
         if iframe:
             driver.switch_to.default_content()
         return True
+
     except Exception as e:
-        log("error", f"✗ Fallo: {description} | {e}")
+        log("error", f"✗ Fallo total: {description} | {e}")
         screenshot = save_screenshot(driver, f"error_{description.replace(' ', '_')}")
         with open(os.path.join(logs_dir, "status.txt"), "w") as f:
             f.write("alarma_confirmada")
-        send_alert_email(screenshot, f"No se pudo clicar: {description}")
+        send_alert_email(screenshot, f"No se pudo interactuar: {description}")
         return False
-
 # =========================
 # Certificado (100% funcional)
 # =========================
@@ -233,6 +256,9 @@ def run_automation():
             driver.quit()
             sys.exit(1)
         save_screenshot(driver, "03_cert_ok")
+        log("info", "Esperando 5 segundos extra post-certificado...")
+        time.sleep(5)
+        wait_for_loaders(driver, timeout=30)  # Forzar espera larga
 
         # 3. Dades i documents
         if not click_with_wait(driver, By.ID, "apt_did", "Dades i documents"):
