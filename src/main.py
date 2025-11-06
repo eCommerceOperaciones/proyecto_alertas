@@ -236,64 +236,89 @@ def click_btn_cert(driver) -> bool:
 def run_automation():
     driver = setup_driver()
     try:
-        log("info", f"Accediendo a: {ACCES_FRONTAL_EMD_URL}")
+        log("info", f"URL: {ACCES_FRONTAL_EMD_URL}")
         driver.get(ACCES_FRONTAL_EMD_URL)
-        WebDriverWait(driver, DEFAULT_WAIT * 3).until(
-            lambda d: d.execute_script("return document.readyState") == "complete"
-        )
-        log("info", "Página cargada y DOM listo.")
+        WebDriverWait(driver, 30).until(lambda d: d.execute_script("return document.readyState") == "complete")
+        
 
-        WebDriverWait(driver, DEFAULT_WAIT).until(
-            EC.presence_of_element_located((By.TAG_NAME, "body"))
-        )
-        log("info", "Página cargada correctamente.")
+        # 1. Shadow: "Soc un ciutadà/ana"
+        if not click_with_wait(driver, None, None, "Botón 'Soc un ciutadà/ana'", shadow=True):
+            driver.quit()
+            sys.exit(1)
+        
 
-        shadow_query = (
-            'return document.querySelector("#single-spa-application\\\\:mfe-main-app > app-root").'
-            'shadowRoot.querySelector("main > app-acces > div > div.left > button")'
-        )
-        if not click_shadow_element(driver, shadow_query, "Botón 'Soc un ciutadà/ana' no encontrado"):
-            return False
-
-        time.sleep(2)
-
+        # 2. Certificado digital
         if not click_btn_cert(driver):
-            return False
+            screenshot = save_screenshot(driver, "03_cert_fallo")
+            with open(os.path.join(logs_dir, "status.txt"), "w") as f:
+                f.write("alarma_confirmada")
+            send_alert_email(screenshot, "No se pudo seleccionar certificado digital")
+            driver.quit()
+            sys.exit(1)
+        log("info", "Esperando 5 segundos extra post-certificado...")
+        time.sleep(5)
+        wait_for_loaders(driver, timeout=30)  # Forzar espera larga
 
-        if not click_element(driver, By.ID, "apt_did", "Dades i documents"):
-            return False
+        # 3. Dades i documents
+        if not click_with_wait(driver, By.ID, "apt_did", "Dades i documents"):
+            driver.quit()
+            sys.exit(1)
+        
 
-        if not click_element(driver, By.XPATH, '//*[@id="center_1R"]/app-root/app-home/div/div[2]/div[2]/h3/a', "Els meus documents"):
-            return False
-        save_screenshot(driver, "05_docs_click")
+        # 4. Els meus documents
+        if not click_with_wait(driver, By.XPATH, '//*[@id="center_1R"]/app-root/app-home/div/div[2]/div[2]/h3/a', "Els meus documents"):
+            driver.quit()
+            sys.exit(1)
+        
 
-        log("info", "Esperando carga final del contenido...")
+        # 5. Final: lista documentos
+        log("info", "Esperando documentos...")
         try:
-            WebDriverWait(driver, DEFAULT_WAIT * 3).until(
+            WebDriverWait(driver, DEFAULT_WAIT * 2).until(
                 EC.visibility_of_element_located((By.XPATH, '//*[@id="center_1R"]/app-root/app-emd/emd-home/emd-documents/div/emd-cards-view/ul/li[1]/div'))
             )
-            log("info", "✅ Flujo completado correctamente.")
+            log("info", "FLUJOS OK - Falso positivo")
             save_screenshot(driver, "06_final_ok")
             with open(os.path.join(logs_dir, "status.txt"), "w") as f:
                 f.write("falso_positivo")
-            return True  # <-- IMPORTANTE: devolver True para que Jenkins marque SUCCESS
-        except Exception:
-            log("error", "Alarma ACCES FRONTAL EMD confirmada")
-            save_screenshot(driver, "alarma_confirmada")
+            return True
+        except:
+            log("error", "ALERTA REAL: No cargaron documentos")
+            screenshot = save_screenshot(driver, "alarma_real")
             with open(os.path.join(logs_dir, "status.txt"), "w") as f:
                 f.write("alarma_confirmada")
+            send_alert_email(screenshot, "No se cargó la lista de documentos")
             return False
 
     except Exception as e:
-        log("error", f"Error en ejecución: {e}")
-        save_screenshot(driver, "error_general")
-        with open(os.path.join(logs_dir, "status.txt"), "w") as f:
-            f.write("alarma_confirmada")
+        log("error", f"Error crítico: {e}")
+        try:
+            screenshot = save_screenshot(driver, "error_critico")
+            with open(os.path.join(logs_dir, "status.txt"), "w") as f:
+                f.write("alarma_confirmada")
+            send_alert_email(screenshot, f"Error: {e}")
+        except:
+            pass
         return False
     finally:
         driver.quit()
-        log("info", "Driver cerrado correctamente.")
 
 if __name__ == "__main__":
     success = run_automation()
-    sys.exit(0 if success else 1)
+    final_status = "falso_positivo" if success else "alarma_confirmada"
+    
+    # 1. En logs (para histórico)
+    with open(os.path.join(logs_dir, "status.txt"), "w") as f:
+        f.write(final_status)
+    
+    # 2. EN RAÍZ (para Jenkins)
+    root_status_path = os.path.join(WORKSPACE, "status.txt")
+    with open(root_status_path, "w") as f:
+        f.write(final_status)
+    
+    if success:
+        log("info", "=== JOB SUCCESS: falso_positivo ===")
+        sys.exit(0)
+    else:
+        log("error", "=== JOB FAILURE: alarma_confirmada ===")
+        sys.exit(1)
