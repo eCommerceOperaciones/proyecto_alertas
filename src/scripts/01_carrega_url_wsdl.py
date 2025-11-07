@@ -7,7 +7,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
 from selenium.common.exceptions import NoSuchElementException
-from src.dispatcher.functions_dev import print_email_data
 import os, sys, time, json
 from datetime import datetime
 from dotenv import load_dotenv
@@ -21,12 +20,10 @@ if os.path.exists(ENV_PATH):
 
 WORKSPACE = os.getenv("WORKSPACE", os.getcwd())
 FIREFOX_PROFILE_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(WORKSPACE, "profiles", "selenium_cert")
-
-# Ruta al archivo JSON con la información del correo
 EMAIL_DATA_PATH = sys.argv[2] if len(sys.argv) > 2 else None
 
 # =========================
-# Carpetas
+# Carpetas y run_id
 # =========================
 run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
 run_dir = os.path.join(WORKSPACE, "runs", run_id)
@@ -35,6 +32,7 @@ logs_dir = os.path.join(run_dir, "logs")
 os.makedirs(screenshots_dir, exist_ok=True)
 os.makedirs(logs_dir, exist_ok=True)
 
+# Guardar run_id para Jenkins
 with open(os.path.join(WORKSPACE, "current_run.txt"), "w") as f:
   f.write(run_id)
 
@@ -54,6 +52,23 @@ def save_screenshot(driver, name: str) -> str:
   log("info", f"Captura: {filename}")
   return filename
 
+# =========================
+# Función de prueba para imprimir datos del correo
+# =========================
+def print_email_data():
+  if EMAIL_DATA_PATH and os.path.exists(EMAIL_DATA_PATH):
+      try:
+          with open(EMAIL_DATA_PATH, "r", encoding="utf-8") as f:
+              email_data = json.load(f)
+          log("info", "=== Datos del correo que disparó la alerta ===")
+          log("info", f"Alerta: {email_data.get('alert_name')}")
+          log("info", f"Remitente: {email_data.get('from_email')}")
+          log("info", f"Asunto: {email_data.get('subject')}")
+          log("info", f"Cuerpo: {email_data.get('body')}")
+      except Exception as e:
+          log("error", f"No se pudo leer email_data.json: {e}")
+  else:
+      log("warn", "No se encontró email_data.json o no se pasó la ruta")
 
 # =========================
 # Driver
@@ -72,7 +87,7 @@ def setup_driver() -> webdriver.Firefox:
   profile = webdriver.FirefoxProfile(FIREFOX_PROFILE_PATH)
   options.profile = profile
 
-  GECKODRIVER_PATH = os.path.join(os.getenv("WORKSPACE", os.getcwd()), "bin", "geckodriver")
+  GECKODRIVER_PATH = os.path.join(WORKSPACE, "bin", "geckodriver")
   service = Service(GECKODRIVER_PATH)
   driver = webdriver.Firefox(service=service, options=options)
   driver.set_page_load_timeout(60)
@@ -82,10 +97,11 @@ def setup_driver() -> webdriver.Firefox:
 # Flujo principal
 # =========================
 def run_automation():
-  driver = setup_driver()
+  driver = None
   try:
+      driver = setup_driver()
       log("info", "Abriendo Google...")
-      driver.get("bloqueado")  # URL bloqueada por política
+      driver.get("https://www.google.com")
       time.sleep(2)
 
       log("info", "Buscando el logo de Google...")
@@ -108,10 +124,12 @@ def run_automation():
 
   except Exception as e:
       log("error", f"Error crítico: {e}")
-      save_screenshot(driver, "error_critico")
+      if driver:
+          save_screenshot(driver, "error_critico")
       return False
   finally:
-      driver.quit()
+      if driver:
+          driver.quit()
 
 if __name__ == "__main__":
   # Imprimir datos del correo al inicio para pruebas
@@ -119,8 +137,11 @@ if __name__ == "__main__":
 
   success = run_automation()
   final_status = "falso_positivo" if success else "alarma_confirmada"
+
+  # Guardar status en logs y raíz para Jenkins
   with open(os.path.join(logs_dir, "status.txt"), "w") as f:
       f.write(final_status)
   with open(os.path.join(WORKSPACE, "status.txt"), "w") as f:
       f.write(final_status)
+
   sys.exit(0 if success else 1)
