@@ -1,3 +1,8 @@
+# =========================
+# acces_frontal_emd.py
+# =========================
+
+
 import os
 import sys
 import time
@@ -102,23 +107,25 @@ def send_alert_email(screenshot_path: str, error_msg: str):
 # Driver
 # =========================
 def setup_driver() -> webdriver.Firefox:
-    if not os.path.exists(FIREFOX_PROFILE_PATH):
-        raise FileNotFoundError(f"Perfil no encontrado: {FIREFOX_PROFILE_PATH}")
+  if not os.path.exists(FIREFOX_PROFILE_PATH):
+      raise FileNotFoundError(f"Perfil no encontrado: {FIREFOX_PROFILE_PATH}")
 
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1920,1080")
+  options = Options()
+  options.add_argument("--headless")
+  options.add_argument("--no-sandbox")
+  options.add_argument("--disable-dev-shm-usage")
+  options.add_argument("--disable-gpu")
+  options.add_argument("--window-size=1920,1080")
 
-    profile = webdriver.FirefoxProfile(FIREFOX_PROFILE_PATH)
-    options.profile = profile
+  profile = webdriver.FirefoxProfile(FIREFOX_PROFILE_PATH)
+  options.profile = profile
 
-    service = Service(GeckoDriverManager().install())
-    driver = webdriver.Firefox(service=service, options=options)
-    driver.set_page_load_timeout(60)
-    return driver
+  # Usar GeckoDriver ya instalado en Jenkins
+  GECKODRIVER_PATH = "/usr/local/bin/geckodriver"
+  service = Service(GECKODRIVER_PATH)
+  driver = webdriver.Firefox(service=service, options=options)
+  driver.set_page_load_timeout(60)
+  return driver
 
 # =========================
 # Espera loaders

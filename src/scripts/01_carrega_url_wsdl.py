@@ -1,25 +1,11 @@
-# =========================
-# 01_carrega_url_wsdl.py
-# =========================
-"""
-Script de prueba con Selenium y Firefox que:
-1. Accede a la página de Google.
-2. Identifica el logo de Google.
-3. Si lo encuentra, toma una captura de pantalla.
-4. Marca estado para Jenkins (falso_positivo o alarma_confirmada).
-"""
-
-import os
-import sys
-import time
-from datetime import datetime
-from dotenv import load_dotenv
 from selenium import webdriver
+from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
-from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
-from webdriver_manager.firefox import GeckoDriverManager
+import os, sys, time
+from datetime import datetime
+from dotenv import load_dotenv
 
 # =========================
 # Cargar .env
@@ -29,8 +15,6 @@ if os.path.exists(ENV_PATH):
   load_dotenv(dotenv_path=ENV_PATH)
 
 WORKSPACE = os.getenv("WORKSPACE", os.getcwd())
-
-# Perfil (Jenkins o local)
 FIREFOX_PROFILE_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(WORKSPACE, "profiles", "selenium_cert")
 
 # =========================
@@ -79,7 +63,8 @@ def setup_driver() -> webdriver.Firefox:
   profile = webdriver.FirefoxProfile(FIREFOX_PROFILE_PATH)
   options.profile = profile
 
-  service = Service(GeckoDriverManager().install())
+  GECKODRIVER_PATH = "/usr/local/bin/geckodriver"  # Ruta fija en Jenkins
+  service = Service(GECKODRIVER_PATH)
   driver = webdriver.Firefox(service=service, options=options)
   driver.set_page_load_timeout(60)
   return driver
@@ -119,25 +104,11 @@ def run_automation():
   finally:
       driver.quit()
 
-# =========================
-# Ejecución
-# =========================
 if __name__ == "__main__":
   success = run_automation()
   final_status = "falso_positivo" if success else "alarma_confirmada"
-
-  # Guardar estado en logs
   with open(os.path.join(logs_dir, "status.txt"), "w") as f:
       f.write(final_status)
-
-  # Guardar estado en raíz para Jenkins
-  root_status_path = os.path.join(WORKSPACE, "status.txt")
-  with open(root_status_path, "w") as f:
+  with open(os.path.join(WORKSPACE, "status.txt"), "w") as f:
       f.write(final_status)
-
-  if success:
-      log("info", "=== JOB SUCCESS: falso_positivo ===")
-      sys.exit(0)
-  else:
-      log("error", "=== JOB FAILURE: alarma_confirmada ===")
-      sys.exit(1)
+  sys.exit(0 if success else 1)
