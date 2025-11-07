@@ -7,7 +7,7 @@ según el contenido, remitente, asunto y cuerpo, lanza un job en Jenkins
 para ejecutar scripts específicos asociados a alertas configuradas.
 """
 
-import os, json, time, re, requests
+import os, json, time, re, requests, sys
 from dotenv import load_dotenv
 from imapclient import IMAPClient
 from email import message_from_bytes
@@ -30,7 +30,22 @@ JENKINS_URL = os.getenv("JENKINS_URL")
 JENKINS_USER = os.getenv("JENKINS_USER")
 JENKINS_TOKEN = os.getenv("JENKINS_TOKEN")
 JOB_NAME = os.getenv("JOB_NAME", "GSIT_Alertas_Pruebas")
-WORKSPACE = os.getenv("WORKSPACE", os.getcwd())
+
+# ============================
+# CONFIGURACIÓN DE WORKSPACE
+# ============================
+# Ruta por defecto del workspace de Jenkins
+DEFAULT_JENKINS_WORKSPACE = "/var/lib/jenkins/workspace/GSIT_Alertas_Pruebas"
+WORKSPACE = os.getenv("WORKSPACE", DEFAULT_JENKINS_WORKSPACE)
+
+# Crear el workspace si no existe
+if not os.path.exists(WORKSPACE):
+  try:
+      os.makedirs(WORKSPACE, exist_ok=True)
+      print(f"[INFO] Carpeta de workspace creada: {WORKSPACE}")
+  except Exception as e:
+      print(f"[ERROR] No se pudo crear el workspace en {WORKSPACE}: {e}")
+      sys.exit(1)
 
 # ============================
 # ALERTAS CONFIGURADAS
@@ -134,7 +149,7 @@ def detect_alert(from_email, subject, body):
   return None, None
 
 def save_email_data(alert_name, from_email, subject, body):
-  """Guarda los datos del correo en un JSON único por ejecución."""
+  """Guarda los datos del correo en un JSON único por ejecución dentro del workspace de Jenkins."""
   run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
   run_dir = os.path.join(WORKSPACE, "runs", run_id)
   os.makedirs(run_dir, exist_ok=True)
@@ -153,6 +168,8 @@ def save_email_data(alert_name, from_email, subject, body):
 
   with open(os.path.join(WORKSPACE, "current_run.txt"), "w") as f:
       f.write(run_id)
+
+  print(f"[INFO] Datos del correo guardados en: {email_data_path}")
 
 def check_email():
   """Conecta al servidor IMAP, busca correos no leídos y detecta alertas."""
