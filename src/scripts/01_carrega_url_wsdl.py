@@ -1,9 +1,14 @@
+# =========================
+# 01_carrega_url_wsdl.py
+# =========================
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
 from selenium.common.exceptions import NoSuchElementException
-import os, sys, time
+from src.dispatcher.functions_dev import print_email_data
+import os, sys, time, json
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -16,6 +21,9 @@ if os.path.exists(ENV_PATH):
 
 WORKSPACE = os.getenv("WORKSPACE", os.getcwd())
 FIREFOX_PROFILE_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(WORKSPACE, "profiles", "selenium_cert")
+
+# Ruta al archivo JSON con la información del correo
+EMAIL_DATA_PATH = sys.argv[2] if len(sys.argv) > 2 else None
 
 # =========================
 # Carpetas
@@ -46,6 +54,7 @@ def save_screenshot(driver, name: str) -> str:
   log("info", f"Captura: {filename}")
   return filename
 
+
 # =========================
 # Driver
 # =========================
@@ -69,7 +78,6 @@ def setup_driver() -> webdriver.Firefox:
   driver.set_page_load_timeout(60)
   return driver
 
-
 # =========================
 # Flujo principal
 # =========================
@@ -77,7 +85,7 @@ def run_automation():
   driver = setup_driver()
   try:
       log("info", "Abriendo Google...")
-      driver.get("https://www.google.com")
+      driver.get("bloqueado")  # URL bloqueada por política
       time.sleep(2)
 
       log("info", "Buscando el logo de Google...")
@@ -106,6 +114,9 @@ def run_automation():
       driver.quit()
 
 if __name__ == "__main__":
+  # Imprimir datos del correo al inicio para pruebas
+  print_email_data()
+
   success = run_automation()
   final_status = "falso_positivo" if success else "alarma_confirmada"
   with open(os.path.join(logs_dir, "status.txt"), "w") as f:

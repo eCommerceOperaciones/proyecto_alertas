@@ -15,11 +15,11 @@ from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.firefox import GeckoDriverManager
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
+import json
 
 # =========================
 # Cargar .env
@@ -36,6 +36,10 @@ DEFAULT_WAIT = int(os.getenv("DEFAULT_WAIT", "15"))
 
 # Perfil (Jenkins o local)
 FIREFOX_PROFILE_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(WORKSPACE, "profiles", "selenium_cert")
+
+# Ruta al archivo JSON con la información del correo
+EMAIL_DATA_PATH = sys.argv[2] if len(sys.argv) > 2 else None
+
 
 # =========================
 # Carpetas
@@ -295,6 +299,7 @@ def run_automation():
             with open(os.path.join(logs_dir, "status.txt"), "w") as f:
                 f.write("alarma_confirmada")
             send_alert_email(screenshot, "No se cargó la lista de documentos")
+            
             return False
 
     except Exception as e:

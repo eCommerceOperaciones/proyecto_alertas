@@ -37,10 +37,10 @@ node('main') {
                   python3 -m venv venv
                   ./venv/bin/pip install --upgrade pip
                   ./venv/bin/pip install -r requirements.txt
-            
+
                   # Carpeta local para geckodriver
                   mkdir -p $WORKSPACE/bin
-            
+
                   # Descargar geckodriver si no existe
                   if [ ! -f "$WORKSPACE/bin/geckodriver" ]; then
                       echo "⚠ geckodriver no encontrado, instalando en $WORKSPACE/bin"
@@ -57,10 +57,6 @@ node('main') {
             }
 
 
-            stage('Verificar variables de entorno') {
-                sh 'echo "ACCES_FRONTAL_EMD_URL=$ACCES_FRONTAL_EMD_URL"'
-            }
-
             stage('Ejecutar dispatcher / script') {
                 script {
                     // Ejecuta el dispatcher runner, pasando el nombre lógico del script
@@ -68,7 +64,7 @@ node('main') {
                     def scriptName = params.SCRIPT_NAME ?: 'acces_frontal_emd'
                     echo "▶ Ejecutando runner para SCRIPT_NAME=${scriptName}"
                     sh """set -e
-                        ./venv/bin/python src/runner.py --script "${scriptName}" --profile "$WORKSPACE/profiles/selenium_cert"
+                        ./venv/bin/python src/runner.py --script "${scriptName}" --profile "$WORKSPACE/profiles/selenium_cert" --email-data "$WORKSPACE/email_data.json"
                     """
                 }
             }
@@ -109,7 +105,7 @@ node('main') {
                             currentBuild.result = 'SUCCESS'   // evitar notificación por ahora
 
                             // dormir / reintentar
-                            sleep(time: 5, unit: "MINUTES")
+                            sleep(time: 1, unit: "MINUTES")
 
                             // relanzar el mismo job con RETRY_COUNT incrementado y manteniendo SCRIPT_NAME
                             def nextRetry = (retryCount + 1).toString()
