@@ -7,7 +7,7 @@ según el contenido, remitente, asunto y cuerpo, lanza un job en Jenkins
 para ejecutar scripts específicos asociados a alertas configuradas.
 """
 
-import os, json ,time , re, requests
+import os, json, time, re, requests
 from dotenv import load_dotenv
 from imapclient import IMAPClient
 from email import message_from_bytes
@@ -112,35 +112,47 @@ def parse_email_body(email_message):
   return body
 
 def detect_alert(from_email, subject, body):
-    from_email_norm = normalize_text(from_email)
-    subject_norm = normalize_text(subject)
-    body_norm = normalize_text(body)
+  """Detecta si el correo coincide con alguna alerta configurada."""
+  from_email_norm = normalize_text(from_email)
+  subject_norm = normalize_text(subject)
+  body_norm = normalize_text(body)
 
-    for alert_name, data in ALERTS.items():
-        match = True
+  for alert_name, data in ALERTS.items():
+      match = True
 
-        if "from" in data and normalize_text(data["from"]) not in from_email_norm:
-            match = False
-        if "subject_contains" in data and normalize_text(data["subject_contains"]) not in subject_norm:
-            match = False
-        if "body_contains" in data and normalize_text(data["body_contains"]) not in body_norm:
-            match = False
+      if "from" in data and normalize_text(data["from"]) not in from_email_norm:
+          match = False
+      if "subject_contains" in data and normalize_text(data["subject_contains"]) not in subject_norm:
+          match = False
+      if "body_contains" in data and normalize_text(data["body_contains"]) not in body_norm:
+          match = False
 
-        if match:
-            print(f"[INFO] ✅ Alerta detectada: {alert_name}")
-            return alert_name, data["script"]  # devolvemos ambos valores
+      if match:
+          print(f"[INFO] ✅ Alerta detectada: {alert_name}")
+          return alert_name, data["script"]
 
-    return None, None
+  return None, None
 
 def save_email_data(alert_name, from_email, subject, body):
-  email_data = {
-      "alert_name": alert_name,
-      "from_email": from_email,
-      "subject": subject,
-      "body": body
-  }
-  with open("email_data.json", "w", encoding="utf-8") as f:
-      json.dump(email_data, f, ensure_ascii=False, indent=4)
+  """Guarda los datos del correo en un JSON único por ejecución."""
+  run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+  run_dir = os.path.join(WORKSPACE, "runs", run_id)
+  os.makedirs(run_dir, exist_ok=True)
+
+  email_data_path = os.path.join(run_dir, "email_data.json")
+  with open(email_data_path, "w", encoding="utf-8") as f:
+      json.dump({
+          "alert_name": alert_name,
+          "from_email": from_email,
+          "subject": subject,
+          "body": body
+      }, f, ensure_ascii=False, indent=4)
+
+  with open(os.path.join(WORKSPACE, "email_data_path.txt"), "w") as f:
+      f.write(email_data_path)
+
+  with open(os.path.join(WORKSPACE, "current_run.txt"), "w") as f:
+      f.write(run_id)
 
 def check_email():
   """Conecta al servidor IMAP, busca correos no leídos y detecta alertas."""
@@ -166,7 +178,6 @@ def check_email():
           if script_to_run:
               save_email_data(alert_name, from_email, subject, body)
               trigger_jenkins_job(script_to_run)
-              server.add_flags(msgid, [b'\\Seen'])
           else:
               print("[INFO] No coincide con ninguna alerta configurada.")
 

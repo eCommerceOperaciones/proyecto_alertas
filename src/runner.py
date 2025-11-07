@@ -25,6 +25,7 @@ def main():
   )
   args = parser.parse_args()
 
+  # Validar que el script existe en el registry
   try:
       script_relpath = load_script_path(args.script)
   except Exception as e:
@@ -35,6 +36,14 @@ def main():
   if not os.path.exists(script_abspath):
       print(f"[ERROR] Script no encontrado en: {script_abspath}")
       sys.exit(1)
+
+  # Validar email_data si se pasa
+  if args.email_data:
+      if not os.path.exists(args.email_data):
+          print(f"[ERROR] El archivo email_data.json no existe en: {args.email_data}")
+          sys.exit(1)
+      else:
+          print(f"[INFO] Usando email_data.json: {args.email_data}")
 
   print(f"[INFO] Ejecutando script: {script_abspath}")
 
@@ -51,7 +60,7 @@ def main():
       print(f"[ERROR] Fallo al ejecutar el script: {e}")
       rc = 1
 
-  # Leer status.txt que crea el script (debe existir)
+  # Leer status.txt que crea el script
   status_file = os.path.join(WORKSPACE, "status.txt")
   status = None
   if os.path.exists(status_file):
@@ -60,11 +69,14 @@ def main():
               status = f.read().strip()
       except Exception as e:
           print(f"[WARN] No se pudo leer status.txt: {e}")
+  else:
+      print("[WARN] status.txt no encontrado")
 
   if status:
       print(f"[INFO] status.txt => {status}")
   else:
-      print("[WARN] status.txt no encontrado o vacío")
+      print("[ERROR] status.txt no encontrado o vacío")
+      sys.exit(1)  # Error técnico si no hay status.txt
 
   # Salida: 0 si éxito (falso_positivo), 1 si alarma_confirmada o error
   if status == "falso_positivo":
