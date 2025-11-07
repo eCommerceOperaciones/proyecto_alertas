@@ -1,7 +1,4 @@
-// Jenkinsfile - Enterprise / Dispatcher-ready
 node('main') {
-
-  // ---- Asegurar parámetros del job ----
   if (!params.SCRIPT_NAME || !params.RETRY_COUNT) {
       properties([
           parameters([
@@ -12,21 +9,12 @@ node('main') {
   }
 
   withCredentials([
-      usernamePassword(
-          credentialsId: 'email-alertas-user',
-          usernameVariable: 'EMAIL_CREDS_USR',
-          passwordVariable: 'EMAIL_CREDS_PSW'
-      ),
-      usernamePassword(
-          credentialsId: 'jenkins-api',
-          usernameVariable: 'JENKINS_CREDS_USR',
-          passwordVariable: 'JENKINS_CREDS_PSW'
-      )
+      usernamePassword(credentialsId: 'email-alertas-user', usernameVariable: 'EMAIL_CREDS_USR', passwordVariable: 'EMAIL_CREDS_PSW'),
+      usernamePassword(credentialsId: 'jenkins-api', usernameVariable: 'JENKINS_CREDS_USR', passwordVariable: 'JENKINS_CREDS_PSW')
   ]) {
-
       try {
           stage('Checkout') {
-              git branch: 'Dev_Sondas', url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git'
+              git branch: 'Dev_Sondas', url: 'bloqueado'
           }
 
           stage('Preparar entorno') {
@@ -35,7 +23,6 @@ node('main') {
                   python3 -m venv venv
                   ./venv/bin/pip install --upgrade pip
                   ./venv/bin/pip install -r requirements.txt
-
                   mkdir -p $WORKSPACE/bin
                   if [ ! -f "$WORKSPACE/bin/geckodriver" ]; then
                       echo "⚠ geckodriver no encontrado, instalando en $WORKSPACE/bin"
@@ -54,14 +41,13 @@ node('main') {
           stage('Ejecutar dispatcher / script') {
               script {
                   def scriptName = params.SCRIPT_NAME ?: 'acces_frontal_emd'
-                  def emailDataPath = ""
-
-                  if (fileExists("${WORKSPACE}/email_data_path.txt")) {
-                      emailDataPath = readFile("${WORKSPACE}/email_data_path.txt").trim()
-                  } else {
+                  if (!fileExists("${WORKSPACE}/email_data_path.txt")) {
                       error("❌ No se encontró email_data_path.txt. No se puede ejecutar el script sin datos del correo.")
                   }
-
+                  def emailDataPath = readFile("${WORKSPACE}/email_data_path.txt").trim()
+                  if (!fileExists(emailDataPath)) {
+                      error("❌ El archivo email_data.json no existe en: ${emailDataPath}")
+                  }
                   echo "▶ Ejecutando runner para SCRIPT_NAME=${scriptName}"
                   sh """set -e
                       ./venv/bin/python src/runner.py --script "${scriptName}" --profile "$WORKSPACE/profiles/selenium_cert" --email-data "${emailDataPath}"
@@ -72,23 +58,14 @@ node('main') {
           stage('Verificar estado') {
               script {
                   def statusPath = "${WORKSPACE}/status.txt"
-                  def status = null
-
-                  if (fileExists(statusPath)) {
-                      status = readFile(statusPath).trim()
-                      echo "✅ status.txt encontrado: ${status}"
-                  } else {
-                      echo "⚠ status.txt NO encontrado en: ${statusPath}"
+                  if (!fileExists(statusPath)) {
                       currentBuild.result = 'FAILURE'
                       error("Fallo: status.txt no generado por el script.")
                   }
+                  def status = readFile(statusPath).trim()
+                  echo "✅ status.txt encontrado: ${status}"
 
-                  def retryCount = 0
-                  try {
-                      retryCount = params.RETRY_COUNT.toInteger()
-                  } catch (e) {
-                      retryCount = 0
-                  }
+                  def retryCount = params.RETRY_COUNT.toInteger()
                   echo "🔄 RETRY_COUNT actual: ${retryCount}"
 
                   if (status == "falso_positivo") {
@@ -99,11 +76,9 @@ node('main') {
                           echo "⚠ Falso positivo detectado. Programando UN único reintento en 1 minuto..."
                           currentBuild.result = 'SUCCESS'
                           sleep(time: 1, unit: "MINUTES")
-                          def nextRetry = (retryCount + 1).toString()
-                          echo "▶ Lanzando reintento: RETRY_COUNT=${nextRetry} SCRIPT_NAME=${params.SCRIPT_NAME}"
                           build job: env.JOB_NAME,
                                 parameters: [
-                                    string(name: 'RETRY_COUNT', value: nextRetry),
+                                    string(name: 'RETRY_COUNT', value: (retryCount + 1).toString()),
                                     string(name: 'SCRIPT_NAME', value: params.SCRIPT_NAME)
                                 ],
                                 wait: false
@@ -121,46 +96,25 @@ node('main') {
       } catch (err) {
           currentBuild.result = 'FAILURE'
           echo "❌ Error en la ejecución: ${err}"
+          error("Pipeline detenido por error crítico")
       } finally {
+          if (currentBuild.result == 'FAILURE' && !fileExists("${WORKSPACE}/status.txt")) {
+              echo "⚠ Fallo antes de ejecutar el script. No se enviará correo ni se archivarán artefactos."
+              return
+          }
           stage('Post - Archivar y Notificar') {
               script {
-                  def run_id = ""
-                  if (fileExists("${WORKSPACE}/current_run.txt")) {
-                      try {
-                          run_id = readFile("${WORKSPACE}/current_run.txt").trim()
-                      } catch (e) {
-                          echo "Warn: no se pudo leer current_run.txt: ${e}"
-                      }
-                  }
-
+                  def run_id = fileExists("${WORKSPACE}/current_run.txt") ? readFile("${WORKSPACE}/current_run.txt").trim() : ""
                   if (run_id) {
                       archiveArtifacts artifacts: "runs/${run_id}/**", allowEmptyArchive: true
-                  } else {
-                      echo "No se encontró current_run.txt; no se archivarán runs/<id> automáticamente"
                   }
-
                   if (currentBuild.result == 'FAILURE') {
-                      if (params.SCRIPT_NAME == 'acces_frontal_emd') {
-                          emailext(
-                              subject: "🚨 Alarma ACCES FRONTAL EMD confirmada",
-                              body: "<p>Se ha confirmado la alarma ACCES FRONTAL EMD.</p><p>Revisa la carpeta de ejecución para logs y capturas.</p>",
-                              to: "ecommerceoperaciones01@gmail.com",
-                              attachmentsPattern: run_id ? "runs/${run_id}/logs/*.log, runs/${run_id}/screenshots/*.png" : ""
-                          )
-                      } else if (params.SCRIPT_NAME == '01_carrega_url_wsdl') {
-                          emailext(
-                              subject: "🚨 Alarma 01_carrega_url_wsdl confirmada",
-                              body: "<p>Se ha confirmado la alarma 01_carrega_url_wsdl.</p><p>Revisa la carpeta de ejecución para logs y capturas.</p>",
-                              to: "ecommerceoperaciones01@gmail.com",
-                              attachmentsPattern: run_id ? "runs/${run_id}/logs/*.log, runs/${run_id}/screenshots/*.png" : ""
-                          )
-                      } else {
-                          emailext(
-                              subject: "❌ Error técnico en ejecución de script",
-                              body: "<p>El script ${params.SCRIPT_NAME} falló por error técnico.</p><p>Revisa los logs para más detalles.</p>",
-                              to: "ecommerceoperaciones01@gmail.com"
-                          )
-                      }
+                      emailext(
+                          subject: "🚨 Alarma ${params.SCRIPT_NAME} confirmada",
+                          body: "<p>Se ha confirmado la alarma ${params.SCRIPT_NAME}.</p><p>Revisa la carpeta de ejecución para logs y capturas.</p>",
+                          to: "ecommerceoperaciones01@gmail.com",
+                          attachmentsPattern: run_id ? "runs/${run_id}/logs/*.log, runs/${run_id}/screenshots/*.png" : ""
+                      )
                   } else {
                       echo "No se enviará correo (build no marcado como FAILURE)."
                   }
