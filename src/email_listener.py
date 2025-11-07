@@ -26,9 +26,10 @@ Este archivo debe contener:
 - JENKINS_URL: URL base del servidor Jenkins
 - JENKINS_USER: usuario de Jenkins
 - JENKINS_TOKEN: token de API de Jenkins
-- JOB_NAME: nombre del job en Jenkins (opcional, por defecto 'GSIT_alertas')
+- JOB_NAME: nombre del job en Jenkins (opcional, por defecto 'GSIT_Alertas_Pruebas')
 """
 load_dotenv()
+GSIT_Alertas_Pruebas
 
 IMAP_SERVER = "imap.gmail.com"  # Servidor IMAP de Gmail
 IMAP_PORT = 993  # Puerto seguro IMAP
@@ -39,7 +40,7 @@ EMAIL_PASS = os.getenv("EMAIL_PASS")
 JENKINS_URL = os.getenv("JENKINS_URL")
 JENKINS_USER = os.getenv("JENKINS_USER")
 JENKINS_TOKEN = os.getenv("JENKINS_TOKEN")
-JOB_NAME = os.getenv("JOB_NAME", "GSIT_alertas")
+JOB_NAME = os.getenv("JOB_NAME", "GSIT_Alertas_Pruebas")
 
 # ============================
 # ALERTAS CONFIGURADAS
