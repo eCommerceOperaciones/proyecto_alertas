@@ -29,7 +29,7 @@ Este archivo debe contener:
 - JOB_NAME: nombre del job en Jenkins (opcional, por defecto 'GSIT_Alertas_Pruebas')
 """
 load_dotenv()
-GSIT_Alertas_Pruebas
+
 
 IMAP_SERVER = "imap.gmail.com"  # Servidor IMAP de Gmail
 IMAP_PORT = 993  # Puerto seguro IMAP
