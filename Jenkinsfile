@@ -1,4 +1,7 @@
+// Jenkinsfile - Enterprise / Dispatcher-ready
 node('main') {
+
+  // ---- Asegurar parámetros del job ----
   if (!params.SCRIPT_NAME || !params.RETRY_COUNT) {
       properties([
           parameters([
@@ -14,7 +17,7 @@ node('main') {
   ]) {
       try {
           stage('Checkout') {
-              git branch: 'Dev_Sondas', url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git'
+              git branch: 'Dev_Sondas', url: 'bloqueado'
           }
 
           stage('Preparar entorno') {
@@ -23,6 +26,7 @@ node('main') {
                   python3 -m venv venv
                   ./venv/bin/pip install --upgrade pip
                   ./venv/bin/pip install -r requirements.txt
+
                   mkdir -p $WORKSPACE/bin
                   if [ ! -f "$WORKSPACE/bin/geckodriver" ]; then
                       echo "⚠ geckodriver no encontrado, instalando en $WORKSPACE/bin"
@@ -98,23 +102,54 @@ node('main') {
           echo "❌ Error en la ejecución: ${err}"
           error("Pipeline detenido por error crítico")
       } finally {
-          if (currentBuild.result == 'FAILURE' && !fileExists("${WORKSPACE}/status.txt")) {
-              echo "⚠ Fallo antes de ejecutar el script. No se enviará correo ni se archivarán artefactos."
-              return
-          }
           stage('Post - Archivar y Notificar') {
               script {
                   def run_id = fileExists("${WORKSPACE}/current_run.txt") ? readFile("${WORKSPACE}/current_run.txt").trim() : ""
+
+                  // Archivar artefactos solo si hay run_id
                   if (run_id) {
                       archiveArtifacts artifacts: "runs/${run_id}/**", allowEmptyArchive: true
+                  } else {
+                      echo "No se encontró current_run.txt; no se archivarán runs/<id> automáticamente"
                   }
-                  if (currentBuild.result == 'FAILURE') {
+
+                  // Si no hay status.txt → error técnico antes de ejecutar el script
+                  if (!fileExists("${WORKSPACE}/status.txt")) {
+                      echo "⚠ No se encontró status.txt → fallo técnico antes de ejecutar el script"
                       emailext(
-                          subject: "🚨 Alarma ${params.SCRIPT_NAME} confirmada",
-                          body: "<p>Se ha confirmado la alarma ${params.SCRIPT_NAME}.</p><p>Revisa la carpeta de ejecución para logs y capturas.</p>",
-                          to: "ecommerceoperaciones01@gmail.com",
-                          attachmentsPattern: run_id ? "runs/${run_id}/logs/*.log, runs/${run_id}/screenshots/*.png" : ""
+                          subject: "❌ Error técnico en ejecución de ${params.SCRIPT_NAME}",
+                          body: """<p>El script <b>${params.SCRIPT_NAME}</b> no se ejecutó debido a un error técnico.</p>
+                                   <p><b>Motivo:</b> Falta email_data.json o fallo previo a la ejecución.</p>
+                                   <p><b>Log de Jenkins:</b> <a href="${env.BUILD_URL}console">${env.BUILD_URL}console</a></p>
+                                   <p>Revisa el log para más detalles.</p>""",
+                          mimeType: 'text/html',
+                          to: "ecommerceoperaciones01@gmail.com"
                       )
+                      return
+                  }
+
+                  // Si hay status.txt, decidir tipo de correo
+                  def status = readFile("${WORKSPACE}/status.txt").trim()
+                  if (currentBuild.result == 'FAILURE') {
+                      if (status == "alarma_confirmada") {
+                          emailext(
+                              subject: "🚨 Alarma ${params.SCRIPT_NAME} confirmada",
+                              body: """<p>Se ha confirmado la alarma <b>${params.SCRIPT_NAME}</b>.</p>
+                                       <p>Revisa la carpeta de ejecución para logs y capturas.</p>
+                                       <p><b>Log de Jenkins:</b> <a href="${env.BUILD_URL}console">${env.BUILD_URL}console</a></p>""",
+                              mimeType: 'text/html',
+                              to: "ecommerceoperaciones01@gmail.com",
+                              attachmentsPattern: run_id ? "runs/${run_id}/logs/*.log, runs/${run_id}/screenshots/*.png" : ""
+                          )
+                      } else {
+                          emailext(
+                              subject: "❌ Error técnico en ejecución de ${params.SCRIPT_NAME}",
+                              body: """<p>El script <b>${params.SCRIPT_NAME}</b> falló por error técnico.</p>
+                                       <p><b>Log de Jenkins:</b> <a href="${env.BUILD_URL}console">${env.BUILD_URL}console</a></p>""",
+                              mimeType: 'text/html',
+                              to: "ecommerceoperaciones01@gmail.com"
+                          )
+                      }
                   } else {
                       echo "No se enviará correo (build no marcado como FAILURE)."
                   }
