@@ -3,36 +3,27 @@
 # =========================
 """
 Script que escucha correos electrónicos entrantes en una cuenta IMAP y,
-según el contenido y remitente, lanza un job en Jenkins para ejecutar
-scripts específicos asociados a alertas configuradas.
+según el contenido, remitente, asunto y cuerpo, lanza un job en Jenkins
+para ejecutar scripts específicos asociados a alertas configuradas.
 """
 
 import os
 import time
 import requests
+import re
 from dotenv import load_dotenv
 from imapclient import IMAPClient
 from email import message_from_bytes
+from email.header import decode_header, make_header
 from bs4 import BeautifulSoup
 
 # ============================
 # CARGAR VARIABLES DE ENTORNO
 # ============================
-"""
-Se cargan las credenciales y configuraciones desde un archivo .env.
-Este archivo debe contener:
-- EMAIL_USER: usuario de la cuenta de correo
-- EMAIL_PASS: contraseña de la cuenta de correo
-- JENKINS_URL: URL base del servidor Jenkins
-- JENKINS_USER: usuario de Jenkins
-- JENKINS_TOKEN: token de API de Jenkins
-- JOB_NAME: nombre del job en Jenkins (opcional, por defecto 'GSIT_Alertas_Pruebas')
-"""
 load_dotenv()
 
-
-IMAP_SERVER = "imap.gmail.com"  # Servidor IMAP de Gmail
-IMAP_PORT = 993  # Puerto seguro IMAP
+IMAP_SERVER = "imap.gmail.com"
+IMAP_PORT = 993
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 
@@ -45,44 +36,38 @@ JOB_NAME = os.getenv("JOB_NAME", "GSIT_Alertas_Pruebas")
 # ============================
 # ALERTAS CONFIGURADAS
 # ============================
-"""
-Diccionario que define las alertas que se pueden detectar.
-Cada alerta contiene:
-- 'from': texto que debe aparecer en el remitente del correo
-- 'script': nombre del script que se pasará como parámetro a Jenkins
-"""
 ALERTS = {
   "Alerta Acces Frontal": {
-      "from": "rpinheiro@viewnext.com",  # opcional
-      "subject_contains": "ELS MEUS DOCUMENTSD",  # opcional
-      "body_contains": "ACCES_FRONTAL_EMD",  # opcional
-      "script": "acces_frontal_emd.py"
+      "from": "rpinheiro@viewnext.com",
+      "subject_contains": "ELS MEUS DOCUMENTS",
+      "body_contains": "ACCES_FRONTAL_EMD",
+      "script": "acces_frontal_emd"
   },
   "Alerta Frameworks": {
       "from": "rpinheiro@viewnext.com",
-      "subject_contains": "[GSIT] - Alerta Activa - ⚠ Alertes - FRAMEWORKS EFORMULARIS",
-      "body_contains": "01_CARREGA_URL_WEFOSJX26-HTTP-WSDL",
-      "script": "01_carrega_url_wsdl.py"
+      "subject_contains": "FRAMEWORKS EFORMULARIS",
+      "body_contains": "01_CARREGA_URL_WEFOSJX26",
+      "script": "01_carrega_url_wsdl"
   }
 }
-
 
 # ============================
 # FUNCIONES
 # ============================
 
+def decode_mime_words(s):
+  """Decodifica un asunto MIME a texto normal."""
+  try:
+      return str(make_header(decode_header(s)))
+  except:
+      return s
+
+def normalize_text(text):
+  """Convierte texto a minúsculas y quita espacios y saltos de línea."""
+  return re.sub(r'\s+', ' ', text.strip().lower())
+
 def trigger_jenkins_job(script_name):
-  """
-  Lanza un job en Jenkins con el parámetro SCRIPT_NAME.
-  
-  Parámetros:
-      script_name (str): Nombre del script que se enviará como parámetro.
-  
-  Flujo:
-      1. Intenta lanzar el job con parámetros.
-      2. Si el job no acepta parámetros, lanza un build simple.
-      3. Devuelve True si se ejecuta correctamente, False en caso contrario.
-  """
+  """Lanza un job en Jenkins con el parámetro SCRIPT_NAME."""
   url = f"{JENKINS_URL}/job/{JOB_NAME}/buildWithParameters"
   params = {"SCRIPT_NAME": script_name}
 
@@ -91,7 +76,6 @@ def trigger_jenkins_job(script_name):
   try:
       resp = requests.post(url, params=params, auth=(JENKINS_USER, JENKINS_TOKEN))
 
-      # Fallback si el job no es parametrizado
       if resp.status_code == 400 and "is not parameterized" in resp.text:
           print("[WARN] Job no parametrizado. Usando build simple.")
           url = f"{JENKINS_URL}/job/{JOB_NAME}/build"
@@ -109,17 +93,7 @@ def trigger_jenkins_job(script_name):
       return False
 
 def parse_email_body(email_message):
-  """
-  Extrae el cuerpo del correo electrónico.
-  
-  Si el contenido es HTML, se convierte a texto plano usando BeautifulSoup.
-  
-  Parámetros:
-      email_message (EmailMessage): Objeto de correo obtenido de IMAP.
-  
-  Retorna:
-      str: Texto del cuerpo del correo.
-  """
+  """Extrae el cuerpo del correo electrónico y lo convierte a texto plano si es HTML."""
   body = ""
 
   if email_message.is_multipart():
@@ -139,19 +113,28 @@ def parse_email_body(email_message):
   return body
 
 def detect_alert(from_email, subject, body):
-  """
-  Determina si el correo coincide con alguna alerta configurada.
-  Compara remitente, asunto y cuerpo según lo definido en ALERTS.
-  """
-  for alert_name, data in ALERTS.items():
-      match = True  # asumimos que coincide hasta que falle un criterio
+  """Determina si el correo coincide con alguna alerta configurada."""
+  from_email_norm = normalize_text(from_email)
+  subject_norm = normalize_text(subject)
+  body_norm = normalize_text(body)
 
-      if "from" in data and data["from"].lower() not in from_email.lower():
-          match = False
-      if "subject_contains" in data and data["subject_contains"].lower() not in subject.lower():
-          match = False
-      if "body_contains" in data and data["body_contains"].lower() not in body.lower():
-          match = False
+  for alert_name, data in ALERTS.items():
+      match = True
+
+      if "from" in data:
+          if normalize_text(data["from"]) not in from_email_norm:
+              print(f"[DEBUG] Remitente no coincide para alerta: {alert_name}")
+              match = False
+
+      if "subject_contains" in data:
+          if normalize_text(data["subject_contains"]) not in subject_norm:
+              print(f"[DEBUG] Asunto no coincide para alerta: {alert_name}")
+              match = False
+
+      if "body_contains" in data:
+          if normalize_text(data["body_contains"]) not in body_norm:
+              print(f"[DEBUG] Cuerpo no coincide para alerta: {alert_name}")
+              match = False
 
       if match:
           print(f"[INFO] ✅ Alerta detectada: {alert_name}")
@@ -159,19 +142,8 @@ def detect_alert(from_email, subject, body):
 
   return None
 
-
 def check_email():
-  """
-  Conecta al servidor IMAP, busca correos no leídos,
-  detecta alertas y lanza el job correspondiente en Jenkins.
-  
-  Flujo:
-      1. Conexión al servidor IMAP.
-      2. Búsqueda de mensajes no leídos.
-      3. Procesamiento de cada mensaje.
-      4. Detección de alertas y ejecución de Jenkins.
-      5. Marcado de mensajes como leídos si se procesan.
-  """
+  """Conecta al servidor IMAP, busca correos no leídos y detecta alertas."""
   with IMAPClient(IMAP_SERVER, port=IMAP_PORT, ssl=True) as server:
       server.login(EMAIL_USER, EMAIL_PASS)
       server.select_folder("INBOX")
@@ -183,7 +155,8 @@ def check_email():
           email_message = message_from_bytes(data[b'RFC822'])
 
           from_email = email_message.get('From', '').lower()
-          subject = email_message.get('Subject', '')
+          subject_raw = email_message.get('Subject', '')
+          subject = decode_mime_words(subject_raw)
 
           print(f"[INFO] Revisando correo de {from_email} | Asunto: {subject}")
 
@@ -192,17 +165,13 @@ def check_email():
 
           if script_to_run:
               trigger_jenkins_job(script_to_run)
-              server.add_flags(msgid, [b'\\Seen'])  # Marca como leído
+              server.add_flags(msgid, [b'\\Seen'])
           else:
               print("[INFO] No coincide con ninguna alerta configurada.")
 
 # ============================
 # MAIN LOOP
 # ============================
-"""
-Bucle principal que revisa el correo cada minuto.
-En caso de error, lo captura y continúa la ejecución.
-"""
 if __name__ == "__main__":
   print("[INFO] Listener de correo iniciado...")
 
@@ -212,4 +181,4 @@ if __name__ == "__main__":
       except Exception as e:
           print(f"[ERROR] Listener error: {e}")
 
-      time.sleep(60)  # Espera 1 minuto antes de la siguiente revisión
+      time.sleep(60)
