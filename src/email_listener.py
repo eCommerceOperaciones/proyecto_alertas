@@ -7,16 +7,13 @@ según el contenido, remitente, asunto y cuerpo, lanza un job en Jenkins
 para ejecutar scripts específicos asociados a alertas configuradas.
 """
 
-import os
-import time
-import requests
-import re
+import os, json ,time , re, requests
 from dotenv import load_dotenv
 from imapclient import IMAPClient
 from email import message_from_bytes
 from email.header import decode_header, make_header
 from bs4 import BeautifulSoup
-import json
+from datetime import datetime
 
 # ============================
 # CARGAR VARIABLES DE ENTORNO
@@ -33,6 +30,7 @@ JENKINS_URL = os.getenv("JENKINS_URL")
 JENKINS_USER = os.getenv("JENKINS_USER")
 JENKINS_TOKEN = os.getenv("JENKINS_TOKEN")
 JOB_NAME = os.getenv("JOB_NAME", "GSIT_Alertas_Pruebas")
+WORKSPACE = os.getenv("WORKSPACE", os.getcwd())
 
 # ============================
 # ALERTAS CONFIGURADAS

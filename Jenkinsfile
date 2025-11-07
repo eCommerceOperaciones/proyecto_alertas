@@ -58,15 +58,18 @@ node('main') {
 
 
             stage('Ejecutar dispatcher / script') {
-                script {
-                    // Ejecuta el dispatcher runner, pasando el nombre lógico del script
-                    // runner.py se encargará de localizar y ejecutar el script real y escribir status.txt
-                    def scriptName = params.SCRIPT_NAME ?: 'acces_frontal_emd'
-                    echo "▶ Ejecutando runner para SCRIPT_NAME=${scriptName}"
-                    sh """set -e
-                        ./venv/bin/python src/runner.py --script "${scriptName}" --profile "$WORKSPACE/profiles/selenium_cert" --email-data "$WORKSPACE/email_data.json"
-                    """
-                }
+              script {
+                  def scriptName = params.SCRIPT_NAME ?: 'acces_frontal_emd'
+                  def emailDataPath = ""
+                  if (fileExists("${WORKSPACE}/email_data_path.txt")) {
+                      emailDataPath = readFile("${WORKSPACE}/email_data_path.txt").trim()
+                  }
+            
+                  echo "▶ Ejecutando runner para SCRIPT_NAME=${scriptName}"
+                  sh """set -e
+                      ./venv/bin/python src/runner.py --script "${scriptName}" --profile "$WORKSPACE/profiles/selenium_cert" --email-data "${emailDataPath}"
+                  """
+              }
             }
 
             stage('Verificar estado') {
