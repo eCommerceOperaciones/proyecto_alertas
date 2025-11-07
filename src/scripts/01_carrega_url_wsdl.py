@@ -63,11 +63,12 @@ def setup_driver() -> webdriver.Firefox:
   profile = webdriver.FirefoxProfile(FIREFOX_PROFILE_PATH)
   options.profile = profile
 
-  GECKODRIVER_PATH = "/usr/local/bin/geckodriver"  # Ruta fija en Jenkins
+  GECKODRIVER_PATH = os.path.join(os.getenv("WORKSPACE", os.getcwd()), "bin", "geckodriver")
   service = Service(GECKODRIVER_PATH)
   driver = webdriver.Firefox(service=service, options=options)
   driver.set_page_load_timeout(60)
   return driver
+
 
 # =========================
 # Flujo principal

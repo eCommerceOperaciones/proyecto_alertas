@@ -32,26 +32,30 @@ node('main') {
             }
 
             stage('Preparar entorno') {
-                sh '''
-                    set -e
-                    python3 -m venv venv
-                    ./venv/bin/pip install --upgrade pip
-                    ./venv/bin/pip install -r requirements.txt
-
-                    # Verificar si geckodriver está instalado
-                    if [ ! -f /usr/local/bin/geckodriver ]; then
-                        echo "⚠ geckodriver no encontrado, instalando..."
-                        GECKO_VERSION="v0.36.0"
-                        wget -q https://github.com/mozilla/geckodriver/releases/download/${GECKO_VERSION}/geckodriver-${GECKO_VERSION}-linux64.tar.gz
-                        tar -xzf geckodriver-${GECKO_VERSION}-linux64.tar.gz
-                        mv geckodriver /usr/local/bin/geckodriver
-                        chmod +x /usr/local/bin/geckodriver
-                        rm geckodriver-${GECKO_VERSION}-linux64.tar.gz
-                    else
-                        echo "✅ geckodriver ya está instalado en /usr/local/bin/geckodriver"
-                    fi
-                '''
+              sh '''
+                  set -e
+                  python3 -m venv venv
+                  ./venv/bin/pip install --upgrade pip
+                  ./venv/bin/pip install -r requirements.txt
+            
+                  # Carpeta local para geckodriver
+                  mkdir -p $WORKSPACE/bin
+            
+                  # Descargar geckodriver si no existe
+                  if [ ! -f "$WORKSPACE/bin/geckodriver" ]; then
+                      echo "⚠ geckodriver no encontrado, instalando en $WORKSPACE/bin"
+                      GECKO_VERSION="v0.36.0"
+                      wget -q https://github.com/mozilla/geckodriver/releases/download/${GECKO_VERSION}/geckodriver-${GECKO_VERSION}-linux64.tar.gz
+                      tar -xzf geckodriver-${GECKO_VERSION}-linux64.tar.gz
+                      mv geckodriver $WORKSPACE/bin/geckodriver
+                      chmod +x $WORKSPACE/bin/geckodriver
+                      rm geckodriver-${GECKO_VERSION}-linux64.tar.gz
+                  else
+                      echo "✅ geckodriver ya está instalado en $WORKSPACE/bin/geckodriver"
+                  fi
+              '''
             }
+
 
             stage('Verificar variables de entorno') {
                 sh 'echo "ACCES_FRONTAL_EMD_URL=$ACCES_FRONTAL_EMD_URL"'
