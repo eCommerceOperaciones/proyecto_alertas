@@ -16,6 +16,7 @@ from imapclient import IMAPClient
 from email import message_from_bytes
 from email.header import decode_header, make_header
 from bs4 import BeautifulSoup
+import json
 
 # ============================
 # CARGAR VARIABLES DE ENTORNO
@@ -113,34 +114,35 @@ def parse_email_body(email_message):
   return body
 
 def detect_alert(from_email, subject, body):
-  """Determina si el correo coincide con alguna alerta configurada."""
-  from_email_norm = normalize_text(from_email)
-  subject_norm = normalize_text(subject)
-  body_norm = normalize_text(body)
+    from_email_norm = normalize_text(from_email)
+    subject_norm = normalize_text(subject)
+    body_norm = normalize_text(body)
 
-  for alert_name, data in ALERTS.items():
-      match = True
+    for alert_name, data in ALERTS.items():
+        match = True
 
-      if "from" in data:
-          if normalize_text(data["from"]) not in from_email_norm:
-              print(f"[DEBUG] Remitente no coincide para alerta: {alert_name}")
-              match = False
+        if "from" in data and normalize_text(data["from"]) not in from_email_norm:
+            match = False
+        if "subject_contains" in data and normalize_text(data["subject_contains"]) not in subject_norm:
+            match = False
+        if "body_contains" in data and normalize_text(data["body_contains"]) not in body_norm:
+            match = False
 
-      if "subject_contains" in data:
-          if normalize_text(data["subject_contains"]) not in subject_norm:
-              print(f"[DEBUG] Asunto no coincide para alerta: {alert_name}")
-              match = False
+        if match:
+            print(f"[INFO] ✅ Alerta detectada: {alert_name}")
+            return alert_name, data["script"]  # devolvemos ambos valores
 
-      if "body_contains" in data:
-          if normalize_text(data["body_contains"]) not in body_norm:
-              print(f"[DEBUG] Cuerpo no coincide para alerta: {alert_name}")
-              match = False
+    return None, None
 
-      if match:
-          print(f"[INFO] ✅ Alerta detectada: {alert_name}")
-          return data["script"]
-
-  return None
+def save_email_data(alert_name, from_email, subject, body):
+  email_data = {
+      "alert_name": alert_name,
+      "from_email": from_email,
+      "subject": subject,
+      "body": body
+  }
+  with open("email_data.json", "w", encoding="utf-8") as f:
+      json.dump(email_data, f, ensure_ascii=False, indent=4)
 
 def check_email():
   """Conecta al servidor IMAP, busca correos no leídos y detecta alertas."""
@@ -161,9 +163,10 @@ def check_email():
           print(f"[INFO] Revisando correo de {from_email} | Asunto: {subject}")
 
           body = parse_email_body(email_message)
-          script_to_run = detect_alert(from_email, subject, body)
+          alert_name, script_to_run = detect_alert(from_email, subject, body)
 
           if script_to_run:
+              save_email_data(alert_name, from_email, subject, body)
               trigger_jenkins_job(script_to_run)
               server.add_flags(msgid, [b'\\Seen'])
           else:

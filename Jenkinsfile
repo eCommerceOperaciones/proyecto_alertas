@@ -133,42 +133,50 @@ node('main') {
             echo "❌ Error en la ejecución: ${err}"
         } finally {
             stage('Post - Archivar y Notificar') {
-                script {
-                    def run_id = ""
-                    if (fileExists("${WORKSPACE}/current_run.txt")) {
-                        try {
-                            run_id = readFile("${WORKSPACE}/current_run.txt").trim()
-                        } catch (e) {
-                            echo "Warn: no se pudo leer current_run.txt: ${e}"
-                        }
-                    }
-
-                    // Archivar artefactos si hay run_id
-                    if (run_id) {
-                        archiveArtifacts artifacts: "runs/${run_id}/**", allowEmptyArchive: true
-                    } else {
-                        echo "No se encontró current_run.txt; no se archivarán runs/<id> automáticamente"
-                    }
-
-                    // Enviar correo solo si hubo alarma confirmada (build marcado como FAILURE)
-                    if (currentBuild.result == 'FAILURE') {
-                        // Intentar adjuntar artifacts del run si existen
-                        def attachments = ""
-                        if (run_id) {
-                            attachments = "runs/${run_id}/logs/*.log, runs/${run_id}/screenshots/*.png"
-                        }
-
-                        emailext(
-                            subject: "🚨 Alarma ACCES FRONTAL EMD confirmada",
-                            body: """<p>Se ha confirmado la alarma ACCES FRONTAL EMD.</p>
-                                     <p>Revisa la carpeta de ejecución para logs y capturas.</p>""",
-                            to: "ecommerceoperaciones01@gmail.com",
-                            attachmentsPattern: attachments
-                        )
-                    } else {
-                        echo "No se enviará correo (build no marcado como FAILURE)."
-                    }
-                }
+              script {
+                  def run_id = ""
+                  if (fileExists("${WORKSPACE}/current_run.txt")) {
+                      try {
+                          run_id = readFile("${WORKSPACE}/current_run.txt").trim()
+                      } catch (e) {
+                          echo "Warn: no se pudo leer current_run.txt: ${e}"
+                      }
+                  }
+            
+                  // Archivar artefactos si hay run_id
+                  if (run_id) {
+                      archiveArtifacts artifacts: "runs/${run_id}/**", allowEmptyArchive: true
+                  } else {
+                      echo "No se encontró current_run.txt; no se archivarán runs/<id> automáticamente"
+                  }
+            
+                  // Enviar correo solo si hubo alarma confirmada y el script coincide
+                  if (currentBuild.result == 'FAILURE') {
+                      if (params.SCRIPT_NAME == 'acces_frontal_emd') {
+                          emailext(
+                              subject: "🚨 Alarma ACCES FRONTAL EMD confirmada",
+                              body: "<p>Se ha confirmado la alarma ACCES FRONTAL EMD.</p><p>Revisa la carpeta de ejecución para logs y capturas.</p>",
+                              to: "ecommerceoperaciones01@gmail.com",
+                              attachmentsPattern: run_id ? "runs/${run_id}/logs/*.log, runs/${run_id}/screenshots/*.png" : ""
+                          )
+                      } else if (params.SCRIPT_NAME == '01_carrega_url_wsdl') {
+                          emailext(
+                              subject: "🚨 Alarma 01_carrega_url_wsdl confirmada",
+                              body: "<p>Se ha confirmado la alarma 01_carrega_url_wsdl.</p><p>Revisa la carpeta de ejecución para logs y capturas.</p>",
+                              to: "ecommerceoperaciones01@gmail.com",
+                              attachmentsPattern: run_id ? "runs/${run_id}/logs/*.log, runs/${run_id}/screenshots/*.png" : ""
+                          )
+                      } else {
+                          emailext(
+                              subject: "❌ Error técnico en ejecución de script",
+                              body: "<p>El script ${params.SCRIPT_NAME} falló por error técnico.</p><p>Revisa los logs para más detalles.</p>",
+                              to: "ecommerceoperaciones01@gmail.com"
+                          )
+                      }
+                  } else {
+                      echo "No se enviará correo (build no marcado como FAILURE)."
+                  }
+              }
             }
         }
     }
