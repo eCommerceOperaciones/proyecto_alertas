@@ -21,7 +21,7 @@ node('main') {
   ]) {
       try {
           stage('Checkout') {
-              git branch: 'Dev_Sondas', url: 'bloqueado'
+              git branch: 'Dev_Sondas', url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git'
           }
 
           stage('Preparar entorno') {
