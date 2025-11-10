@@ -22,7 +22,14 @@ withCredentials([
     try {
         stage('Checkout') {
             git branch: 'Dev_Sondas', url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git' // URL de tu GitHub
+
         }
+        stage('DEBUG Jenkinsfile') {
+             steps {
+                    echo "DEBUG: Ejecutando Jenkinsfile desde branch ${env.GIT_BRANCH}"
+      sh "git log -1"
+  }
+}
 
         stage('Preparar entorno') {
             sh '''
