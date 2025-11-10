@@ -1,13 +1,9 @@
-# =========================
-# 01_carrega_url_wsdl.py (final sin JSON)
-# =========================
-
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
 from selenium.common.exceptions import NoSuchElementException
-import os, sys, time
+import os, sys, time, re
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -21,11 +17,6 @@ if os.path.exists(ENV_PATH):
 WORKSPACE = os.getenv("WORKSPACE", os.getcwd())
 
 # Argumentos esperados:
-# sys.argv[1] -> perfil selenium
-# sys.argv[2] -> alert_name
-# sys.argv[3] -> from_email
-# sys.argv[4] -> subject
-# sys.argv[5] -> body
 FIREFOX_PROFILE_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(WORKSPACE, "profiles", "selenium_cert")
 ALERT_NAME = sys.argv[2] if len(sys.argv) > 2 else ""
 FROM_EMAIL = sys.argv[3] if len(sys.argv) > 3 else ""
@@ -73,6 +64,24 @@ def print_email_data():
   log("info", f"Cuerpo: {EMAIL_BODY}")
 
 # =========================
+# Extraer fecha de inicio del cuerpo
+# =========================
+def extract_fecha_inicio(body):
+  match = re.search(r"Inici:\s*(\d{2}/\d{2}/\d{4}\s+\d{2}:\d{2})", body)
+  return match.group(1) if match else "Desconegut"
+
+# =========================
+# Simular envío de correo
+# =========================
+def simulate_email_send():
+  fecha_inicio = extract_fecha_inicio(EMAIL_BODY)
+  log("info", "=== Simulación de envío de correo ===")
+  log("info", f"Asunto: 🚨 Alarma {ALERT_NAME} confirmada")
+  log("info", f"Fecha de inicio detectada: {fecha_inicio}")
+  log("info", "Cuerpo del correo:")
+  log("info", f"Incidència a la plataforma Gencat serveis i tràmits (GSIT)\nInici: {fecha_inicio}\nFi: Desconegut\nServeis no operatius: ...")
+
+# =========================
 # Driver
 # =========================
 def setup_driver() -> webdriver.Firefox:
@@ -115,14 +124,15 @@ def run_automation():
           except NoSuchElementException:
               logo = None
 
+      # 🔄 Lógica invertida para debug:
       if logo:
-          log("info", "Logo encontrado. Tomando captura...")
+          log("info", "Logo encontrado → Marcando como ALARMA_CONFIRMADA (modo debug)")
           save_screenshot(driver, "google_logo")
-          return True
+          return False  # False = alarma_confirmada
       else:
-          log("error", "Logo no encontrado.")
+          log("info", "Logo NO encontrado → Marcando como FALSO_POSITIVO (modo debug)")
           save_screenshot(driver, "logo_no_encontrado")
-          return False
+          return True   # True = falso_positivo
 
   except Exception as e:
       log("error", f"Error crítico: {e}")
@@ -134,16 +144,19 @@ def run_automation():
           driver.quit()
 
 if __name__ == "__main__":
-  # Mostrar datos del correo al inicio
   print_email_data()
 
   success = run_automation()
   final_status = "falso_positivo" if success else "alarma_confirmada"
 
-  # Guardar status en logs y raíz para Jenkins
+  # Guardar status
   with open(os.path.join(logs_dir, "status.txt"), "w") as f:
       f.write(final_status)
   with open(os.path.join(WORKSPACE, "status.txt"), "w") as f:
       f.write(final_status)
+
+  # Si es alarma_confirmada → simular envío de correo
+  if final_status == "alarma_confirmada":
+      simulate_email_send()
 
   sys.exit(0 if success else 1)
