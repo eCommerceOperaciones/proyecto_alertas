@@ -1,79 +1,38 @@
 pipeline {
-    agent any
+  agent any
 
-    environment {
-        WORKSPACE = "${env.WORKSPACE}"
-        EMAIL_DATA_PATH_FILE = "${WORKSPACE}/email_data_path.txt"
-        CURRENT_RUN_FILE = "${WORKSPACE}/current_run.txt"
-    }
+  parameters {
+      string(name: 'SCRIPT_NAME', defaultValue: 'acces_frontal_emd', description: 'Nombre del script')
+      string(name: 'ALERT_NAME', defaultValue: '', description: 'Nombre de la alerta')
+      string(name: 'EMAIL_FROM', defaultValue: '', description: 'Remitente del correo')
+      string(name: 'EMAIL_SUBJECT', defaultValue: '', description: 'Asunto del correo')
+      text(name: 'EMAIL_BODY', defaultValue: '', description: 'Cuerpo del correo')
+  }
 
-    stages {
+  stages {
+      stage('Mostrar datos recibidos') {
+          steps {
+              echo "🔔 ALERTA: ${params.ALERT_NAME}"
+              echo "📧 Desde: ${params.EMAIL_FROM}"
+              echo "📄 Asunto: ${params.EMAIL_SUBJECT}"
+              echo "📝 Cuerpo: ${params.EMAIL_BODY}"
+          }
+      }
 
-        stage('Validar archivos del Listener') {
-            steps {
-                script {
-                    if (!fileExists(env.EMAIL_DATA_PATH_FILE)) {
-                        error "❌ No existe email_data_path.txt en el workspace: ${env.EMAIL_DATA_PATH_FILE}"
-                    }
+      stage('Ejecutar dispatcher / script') {
+          steps {
+              sh """
+                  ./venv/bin/python src/runner.py \
+                      --script "${params.SCRIPT_NAME}" \
+                      --profile "$WORKSPACE/profiles/selenium_cert"
+              """
+          }
+      }
+  }
 
-                    if (!fileExists(env.CURRENT_RUN_FILE)) {
-                        error "❌ No existe current_run.txt en el workspace: ${env.CURRENT_RUN_FILE}"
-                    }
-
-                    echo "✅ Archivos necesarios detectados."
-                }
-            }
-        }
-
-        stage('Leer archivo email_data_path.txt') {
-            steps {
-                script {
-                    env.EMAIL_JSON_PATH = readFile(env.EMAIL_DATA_PATH_FILE).trim()
-                    echo "📄 Ruta del email_data.json recibida: ${env.EMAIL_JSON_PATH}"
-
-                    if (!fileExists(env.EMAIL_JSON_PATH)) {
-                        error "❌ El archivo email_data.json NO existe en: ${env.EMAIL_JSON_PATH}"
-                    }
-                }
-            }
-        }
-
-        stage('Leer datos del JSON') {
-            steps {
-                script {
-                    def jsonText = readFile(env.EMAIL_JSON_PATH)
-                    def json = new groovy.json.JsonSlurper().parseText(jsonText)
-
-                    echo "✅ JSON cargado correctamente."
-
-                    // Exportar a variables de entorno (si las necesitas)
-                    env.ALERT_NAME = json.alert_name ?: "undefined_alert"
-                    env.FROM_EMAIL = json.from_email ?: "undefined_email"
-                    env.EMAIL_SUBJECT = json.subject ?: "undefined_subject"
-                    env.EMAIL_BODY = json.body ?: "undefined_body"
-
-                    echo "🔔 ALERTA: ${env.ALERT_NAME}"
-                    echo "📧 Desde: ${env.FROM_EMAIL}"
-                }
-            }
-        }
-
-        stage('Ejecutar dispatcher / script') {
-            steps {
-                script {
-                    def scriptName = params.SCRIPT_NAME ?: 'acces_frontal_emd'
-                    sh """set -e
-                        ./venv/bin/python src/runner.py --script \"${scriptName}\" --profile \"$WORKSPACE/profiles/selenium_cert\" --email-data \"${env.EMAIL_JSON_PATH}\"
-                    """
-                }
-            }
-        }
-    }
-
-    post {
-        always {
-            echo "✅ Pipeline finalizado."
-            // archival/notifications pueden quedarse aquí como en tu versión anterior
-        }
-    }
+  post {
+      always {
+          echo "✅ Pipeline finalizado."
+      }
+  }
 }
