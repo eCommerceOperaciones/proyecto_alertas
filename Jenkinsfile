@@ -58,27 +58,22 @@ pipeline {
             }
         }
 
-        stage('Ejecutar Listener Dispatcher') {
+        stage('Ejecutar dispatcher / script') {
             steps {
                 script {
-                    echo "🚀 Ejecutando listener_dispatcher.py..."
-
-                    sh """
-                        python3 listener_dispatcher.py \\
-                        --alert "${env.ALERT_NAME}" \\
-                        --from "${env.FROM_EMAIL}" \\
-                        --subject "${env.EMAIL_SUBJECT}" \\
-                        --body "${env.EMAIL_BODY}"
+                    def scriptName = params.SCRIPT_NAME ?: 'acces_frontal_emd'
+                    sh """set -e
+                        ./venv/bin/python src/runner.py --script \"${scriptName}\" --profile \"$WORKSPACE/profiles/selenium_cert\" --email-data \"${env.EMAIL_JSON_PATH}\"
                     """
                 }
             }
         }
-
     }
 
     post {
         always {
             echo "✅ Pipeline finalizado."
+            // archival/notifications pueden quedarse aquí como en tu versión anterior
         }
     }
 }
