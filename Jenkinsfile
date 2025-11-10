@@ -47,21 +47,21 @@ withCredentials([
         }
 
         stage('Ejecutar dispatcher / script') {
-          steps {
-              withEnv([
-                  "ALERT_NAME=${params.ALERT_NAME}",
-                  "EMAIL_FROM=${params.EMAIL_FROM}",
-                  "EMAIL_SUBJECT=${params.EMAIL_SUBJECT}",
-                  "EMAIL_BODY=${params.EMAIL_BODY}"
-              ]) {
-                  sh """
-                      ./venv/bin/python src/runner.py \
-                          --script ${params.SCRIPT_NAME} \
-                          --profile "$WORKSPACE/profiles/selenium_cert"
-                  """
-              }
-          }
-        }
+  steps {
+      withEnv([
+          "ALERT_NAME=${params.ALERT_NAME}",
+          "EMAIL_FROM=${params.EMAIL_FROM}",
+          "EMAIL_SUBJECT=${params.EMAIL_SUBJECT}",
+          "EMAIL_BODY=${params.EMAIL_BODY}"
+      ]) {
+          sh """
+              ./venv/bin/python src/runner.py \
+                  --script ${params.SCRIPT_NAME} \
+                  --profile "$WORKSPACE/profiles/selenium_cert"
+          """
+      }
+  }
+}
 
         stage('Verificar estado') {
             script {
