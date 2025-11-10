@@ -1,5 +1,5 @@
 # =========================
-# 01_carrega_url_wsdl.py (adaptado sin JSON)
+# 01_carrega_url_wsdl.py (final sin JSON)
 # =========================
 
 from selenium import webdriver
@@ -103,7 +103,7 @@ def run_automation():
   try:
       driver = setup_driver()
       log("info", "Abriendo Google...")
-      driver.get("bloqueado")
+      driver.get("https://www.google.com")
       time.sleep(2)
 
       log("info", "Buscando el logo de Google...")
