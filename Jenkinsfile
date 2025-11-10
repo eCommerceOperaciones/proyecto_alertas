@@ -24,7 +24,11 @@ pipeline {
               sh """
                   ./venv/bin/python src/runner.py \
                       --script "${params.SCRIPT_NAME}" \
-                      --profile "$WORKSPACE/profiles/selenium_cert"
+                      --profile "$WORKSPACE/profiles/selenium_cert" \
+                      --alert-name "${params.ALERT_NAME}" \
+                      --from-email "${params.EMAIL_FROM}" \
+                      --subject "${params.EMAIL_SUBJECT}" \
+                      --body "${params.EMAIL_BODY}"
               """
           }
       }

@@ -19,10 +19,12 @@ def main():
       default=os.path.join(WORKSPACE, "profiles", "selenium_cert"),
       help="Ruta al perfil de selenium (opcional)"
   )
-  parser.add_argument(
-      "--email-data",
-      help="Ruta al archivo JSON con datos del correo (opcional)"
-  )
+  # Nuevos parámetros para datos del correo
+  parser.add_argument("--alert-name", help="Nombre de la alerta detectada")
+  parser.add_argument("--from-email", help="Remitente del correo")
+  parser.add_argument("--subject", help="Asunto del correo")
+  parser.add_argument("--body", help="Cuerpo del correo")
+
   args = parser.parse_args()
 
   # Validar que el script existe en el registry
@@ -37,20 +39,20 @@ def main():
       print(f"[ERROR] Script no encontrado en: {script_abspath}")
       sys.exit(1)
 
-  # Validar email_data si se pasa
-  if args.email_data:
-      if not os.path.exists(args.email_data):
-          print(f"[ERROR] El archivo email_data.json no existe en: {args.email_data}")
-          sys.exit(1)
-      else:
-          print(f"[INFO] Usando email_data.json: {args.email_data}")
-
   print(f"[INFO] Ejecutando script: {script_abspath}")
 
   # Construir comando para ejecutar el script
   cmd = [sys.executable, script_abspath, args.profile]
-  if args.email_data:
-      cmd.append(args.email_data)  # Pasar la ruta del JSON como tercer argumento
+
+  # Si el script necesita los datos del correo, se los pasamos como argumentos
+  if args.alert_name:
+      cmd.append(args.alert_name)
+  if args.from_email:
+      cmd.append(args.from_email)
+  if args.subject:
+      cmd.append(args.subject)
+  if args.body:
+      cmd.append(args.body)
 
   try:
       proc = subprocess.run(cmd, check=False)
