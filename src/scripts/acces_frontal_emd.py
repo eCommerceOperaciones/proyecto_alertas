@@ -37,9 +37,6 @@ DEFAULT_WAIT = int(os.getenv("DEFAULT_WAIT", "15"))
 # Perfil (Jenkins o local)
 FIREFOX_PROFILE_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(WORKSPACE, "profiles", "selenium_cert")
 
-# Ruta al archivo JSON con la información del correo
-EMAIL_DATA_PATH = sys.argv[2] if len(sys.argv) > 2 else None
-
 
 # =========================
 # Carpetas

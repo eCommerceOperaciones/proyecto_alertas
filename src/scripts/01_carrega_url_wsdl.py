@@ -1,5 +1,5 @@
 # =========================
-# 01_carrega_url_wsdl.py
+# 01_carrega_url_wsdl.py (adaptado sin JSON)
 # =========================
 
 from selenium import webdriver
@@ -7,7 +7,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
 from selenium.common.exceptions import NoSuchElementException
-import os, sys, time, json
+import os, sys, time
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -19,8 +19,18 @@ if os.path.exists(ENV_PATH):
   load_dotenv(dotenv_path=ENV_PATH)
 
 WORKSPACE = os.getenv("WORKSPACE", os.getcwd())
+
+# Argumentos esperados:
+# sys.argv[1] -> perfil selenium
+# sys.argv[2] -> alert_name
+# sys.argv[3] -> from_email
+# sys.argv[4] -> subject
+# sys.argv[5] -> body
 FIREFOX_PROFILE_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(WORKSPACE, "profiles", "selenium_cert")
-EMAIL_DATA_PATH = sys.argv[2] if len(sys.argv) > 2 else None
+ALERT_NAME = sys.argv[2] if len(sys.argv) > 2 else ""
+FROM_EMAIL = sys.argv[3] if len(sys.argv) > 3 else ""
+EMAIL_SUBJECT = sys.argv[4] if len(sys.argv) > 4 else ""
+EMAIL_BODY = sys.argv[5] if len(sys.argv) > 5 else ""
 
 # =========================
 # Carpetas y run_id
@@ -53,22 +63,14 @@ def save_screenshot(driver, name: str) -> str:
   return filename
 
 # =========================
-# Función de prueba para imprimir datos del correo
+# Mostrar datos del correo
 # =========================
 def print_email_data():
-  if EMAIL_DATA_PATH and os.path.exists(EMAIL_DATA_PATH):
-      try:
-          with open(EMAIL_DATA_PATH, "r", encoding="utf-8") as f:
-              email_data = json.load(f)
-          log("info", "=== Datos del correo que disparó la alerta ===")
-          log("info", f"Alerta: {email_data.get('alert_name')}")
-          log("info", f"Remitente: {email_data.get('from_email')}")
-          log("info", f"Asunto: {email_data.get('subject')}")
-          log("info", f"Cuerpo: {email_data.get('body')}")
-      except Exception as e:
-          log("error", f"No se pudo leer email_data.json: {e}")
-  else:
-      log("warn", "No se encontró email_data.json o no se pasó la ruta")
+  log("info", "=== Datos del correo que disparó la alerta ===")
+  log("info", f"Alerta: {ALERT_NAME}")
+  log("info", f"Remitente: {FROM_EMAIL}")
+  log("info", f"Asunto: {EMAIL_SUBJECT}")
+  log("info", f"Cuerpo: {EMAIL_BODY}")
 
 # =========================
 # Driver
@@ -101,7 +103,7 @@ def run_automation():
   try:
       driver = setup_driver()
       log("info", "Abriendo Google...")
-      driver.get("https://www.google.com")
+      driver.get("bloqueado")
       time.sleep(2)
 
       log("info", "Buscando el logo de Google...")
@@ -132,7 +134,7 @@ def run_automation():
           driver.quit()
 
 if __name__ == "__main__":
-  # Imprimir datos del correo al inicio para pruebas
+  # Mostrar datos del correo al inicio
   print_email_data()
 
   success = run_automation()
