@@ -1,3 +1,7 @@
+
+# =========================
+# Jenkinsfile (actualizado para opción 1)
+# =========================
 // Jenkinsfile - Enterprise / Dispatcher-ready
 node('main') {
 
@@ -6,7 +10,11 @@ node('main') {
       properties([
           parameters([
               string(name: 'SCRIPT_NAME', defaultValue: 'acces_frontal_emd', description: 'Nombre lógico del script registrado en dispatcher'),
-              string(name: 'RETRY_COUNT',  defaultValue: '0', description: 'Contador de reintentos automáticos')
+              string(name: 'RETRY_COUNT',  defaultValue: '0', description: 'Contador de reintentos automáticos'),
+              string(name: 'ALERT_NAME',   defaultValue: '', description: 'Nombre de la alerta detectada'),
+              string(name: 'EMAIL_FROM',   defaultValue: '', description: 'Remitente del correo'),
+              string(name: 'EMAIL_SUBJECT', defaultValue: '', description: 'Asunto del correo'),
+              text(name: 'EMAIL_BODY', defaultValue: '', description: 'Contenido del correo')
           ])
       ])
   }
@@ -26,34 +34,45 @@ node('main') {
                   python3 -m venv venv
                   ./venv/bin/pip install --upgrade pip
                   ./venv/bin/pip install -r requirements.txt
-
-                  mkdir -p $WORKSPACE/bin
-                  if [ ! -f "$WORKSPACE/bin/geckodriver" ]; then
-                      echo "⚠ geckodriver no encontrado, instalando en $WORKSPACE/bin"
-                      GECKO_VERSION="v0.36.0"
-                      wget -q bloqueado${GECKO_VERSION}/geckodriver-${GECKO_VERSION}-linux64.tar.gz
-                      tar -xzf geckodriver-${GECKO_VERSION}-linux64.tar.gz
-                      mv geckodriver $WORKSPACE/bin/geckodriver
-                      chmod +x $WORKSPACE/bin/geckodriver
-                      rm geckodriver-${GECKO_VERSION}-linux64.tar.gz
-                  else
-                      echo "✅ geckodriver ya está instalado en $WORKSPACE/bin/geckodriver"
-                  fi
               '''
+          }
+
+          stage('Crear email_data.json dinámico') {
+              script {
+                  def runId = new Date().format('yyyyMMdd_HHmmss')
+                  def runDir = "${WORKSPACE}/runs/${runId}"
+
+                  sh "mkdir -p ${runDir}"
+
+                  def jsonData = [
+                      alert_name: params.ALERT_NAME,
+                      from_email: params.EMAIL_FROM,
+                      subject: params.EMAIL_SUBJECT,
+                      body: params.EMAIL_BODY
+                  ]
+
+                  writeFile file: "${runDir}/email_data.json", text: groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(jsonData))
+                  writeFile file: "${WORKSPACE}/email_data_path.txt", text: "${runDir}/email_data.json"
+                  writeFile file: "${WORKSPACE}/current_run.txt", text: runId
+              }
           }
 
           stage('Ejecutar dispatcher / script') {
               script {
                   def scriptName = params.SCRIPT_NAME ?: 'acces_frontal_emd'
+
                   if (!fileExists("${WORKSPACE}/email_data_path.txt")) {
-                      error("❌ No se encontró email_data_path.txt. No se puede ejecutar el script sin datos del correo.")
+                      error("❌ No existe email_data_path.txt")
                   }
+
                   def emailDataPath = readFile("${WORKSPACE}/email_data_path.txt").trim()
+
                   if (!fileExists(emailDataPath)) {
-                      error("❌ El archivo email_data.json no existe en: ${emailDataPath}")
+                      error("❌ Falta email_data.json en: ${emailDataPath}")
                   }
-                  echo "▶ Ejecutando runner para SCRIPT_NAME=${scriptName}"
-                  sh """set -e
+
+                  sh """
+                      set -e
                       ./venv/bin/python src/runner.py --script "${scriptName}" --profile "$WORKSPACE/profiles/selenium_cert" --email-data "${emailDataPath}"
                   """
               }
@@ -62,24 +81,21 @@ node('main') {
           stage('Verificar estado') {
               script {
                   def statusPath = "${WORKSPACE}/status.txt"
+
                   if (!fileExists(statusPath)) {
                       currentBuild.result = 'FAILURE'
-                      error("Fallo: status.txt no generado por el script.")
+                      error("Falta status.txt")
                   }
-                  def status = readFile(statusPath).trim()
-                  echo "✅ status.txt encontrado: ${status}"
 
+                  def status = readFile(statusPath).trim()
                   def retryCount = params.RETRY_COUNT.toInteger()
-                  echo "🔄 RETRY_COUNT actual: ${retryCount}"
 
                   if (status == "falso_positivo") {
                       if (retryCount >= 1) {
-                          echo "ℹ Ya se realizó un reintento. No se volverá a lanzar automáticamente."
                           currentBuild.result = 'SUCCESS'
                       } else {
-                          echo "⚠ Falso positivo detectado. Programando UN único reintento en 1 minuto..."
                           currentBuild.result = 'SUCCESS'
-                          sleep(time: 1, unit: "MINUTES")
+                          sleep(time: 1, unit: 'MINUTES')
                           build job: env.JOB_NAME,
                                 parameters: [
                                     string(name: 'RETRY_COUNT', value: (retryCount + 1).toString()),
@@ -88,10 +104,8 @@ node('main') {
                                 wait: false
                       }
                   } else if (status == "alarma_confirmada") {
-                      echo "🚨 Alarma confirmada según status.txt"
                       currentBuild.result = 'FAILURE'
                   } else {
-                      echo "⚠ Estado desconocido en status.txt: '${status}'"
                       currentBuild.result = 'FAILURE'
                   }
               }
@@ -99,59 +113,14 @@ node('main') {
 
       } catch (err) {
           currentBuild.result = 'FAILURE'
-          echo "❌ Error en la ejecución: ${err}"
-          error("Pipeline detenido por error crítico")
+          error("Pipeline detenido: ${err}")
       } finally {
-          stage('Post - Archivar y Notificar') {
+          stage('Post - Archivar') {
               script {
                   def run_id = fileExists("${WORKSPACE}/current_run.txt") ? readFile("${WORKSPACE}/current_run.txt").trim() : ""
 
-                  // Archivar artefactos solo si hay run_id
                   if (run_id) {
                       archiveArtifacts artifacts: "runs/${run_id}/**", allowEmptyArchive: true
-                  } else {
-                      echo "No se encontró current_run.txt; no se archivarán runs/<id> automáticamente"
-                  }
-
-                  // Si no hay status.txt → error técnico antes de ejecutar el script
-                  if (!fileExists("${WORKSPACE}/status.txt")) {
-                      echo "⚠ No se encontró status.txt → fallo técnico antes de ejecutar el script"
-                      emailext(
-                          subject: "❌ Error técnico en ejecución de ${params.SCRIPT_NAME}",
-                          body: """<p>El script <b>${params.SCRIPT_NAME}</b> no se ejecutó debido a un error técnico.</p>
-                                   <p><b>Motivo:</b> Falta email_data.json o fallo previo a la ejecución.</p>
-                                   <p><b>Log de Jenkins:</b> <a href="${env.BUILD_URL}console">${env.BUILD_URL}console</a></p>
-                                   <p>Revisa el log para más detalles.</p>""",
-                          mimeType: 'text/html',
-                          to: "ecommerceoperaciones01@gmail.com"
-                      )
-                      return
-                  }
-
-                  // Si hay status.txt, decidir tipo de correo
-                  def status = readFile("${WORKSPACE}/status.txt").trim()
-                  if (currentBuild.result == 'FAILURE') {
-                      if (status == "alarma_confirmada") {
-                          emailext(
-                              subject: "🚨 Alarma ${params.SCRIPT_NAME} confirmada",
-                              body: """<p>Se ha confirmado la alarma <b>${params.SCRIPT_NAME}</b>.</p>
-                                       <p>Revisa la carpeta de ejecución para logs y capturas.</p>
-                                       <p><b>Log de Jenkins:</b> <a href="${env.BUILD_URL}console">${env.BUILD_URL}console</a></p>""",
-                              mimeType: 'text/html',
-                              to: "ecommerceoperaciones01@gmail.com",
-                              attachmentsPattern: run_id ? "runs/${run_id}/logs/*.log, runs/${run_id}/screenshots/*.png" : ""
-                          )
-                      } else {
-                          emailext(
-                              subject: "❌ Error técnico en ejecución de ${params.SCRIPT_NAME}",
-                              body: """<p>El script <b>${params.SCRIPT_NAME}</b> falló por error técnico.</p>
-                                       <p><b>Log de Jenkins:</b> <a href="${env.BUILD_URL}console">${env.BUILD_URL}console</a></p>""",
-                              mimeType: 'text/html',
-                              to: "ecommerceoperaciones01@gmail.com"
-                          )
-                      }
-                  } else {
-                      echo "No se enviará correo (build no marcado como FAILURE)."
                   }
               }
           }
