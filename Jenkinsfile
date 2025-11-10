@@ -1,66 +1,106 @@
-pipeline {
-  agent any
+// Jenkinsfile - Enterprise / Dispatcher-ready (sin JSON)
+node('main') {
 
-  parameters {
-      string(name: 'SCRIPT_NAME', defaultValue: 'acces_frontal_emd', description: 'Nombre del script a ejecutar')
-      string(name: 'ALERT_NAME', defaultValue: '', description: 'Nombre de la alerta detectada')
-      string(name: 'EMAIL_FROM', defaultValue: '', description: 'Remitente del correo')
-      string(name: 'EMAIL_SUBJECT', defaultValue: '', description: 'Asunto del correo')
-      text(name: 'EMAIL_BODY', defaultValue: '', description: 'Cuerpo del correo')
-  }
+// ---- Asegurar parámetros del job ----
+if (!params.SCRIPT_NAME || !params.RETRY_COUNT) {
+    properties([
+        parameters([
+            string(name: 'SCRIPT_NAME', defaultValue: 'acces_frontal_emd', description: 'Nombre lógico del script registrado en dispatcher'),
+            string(name: 'RETRY_COUNT',  defaultValue: '0', description: 'Contador de reintentos automáticos'),
+            string(name: 'ALERT_NAME',   defaultValue: '', description: 'Nombre de la alerta detectada'),
+            string(name: 'EMAIL_FROM',   defaultValue: '', description: 'Remitente del correo'),
+            string(name: 'EMAIL_SUBJECT', defaultValue: '', description: 'Asunto del correo'),
+            text(name: 'EMAIL_BODY', defaultValue: '', description: 'Contenido del correo')
+        ])
+    ])
+}
 
-  stages {
-      stage('Preparar entorno') {
-          steps {
-              sh """
-                  set -e
-                  python3 -m venv venv
-                  ./venv/bin/pip install --upgrade pip
-                  ./venv/bin/pip install -r requirements.txt
-                  mkdir -p $WORKSPACE/bin
-                  if [ ! -f $WORKSPACE/bin/geckodriver ]; then
-                      echo "⚙️ Instalando geckodriver..."
-                      # Aquí iría la instalación si no está presente
-                  else
-                      echo "✅ geckodriver ya está instalado en $WORKSPACE/bin/geckodriver"
-                  fi
-              """
-          }
-      }
+withCredentials([
+    usernamePassword(credentialsId: 'email-alertas-user', usernameVariable: 'EMAIL_CREDS_USR', passwordVariable: 'EMAIL_CREDS_PSW'),
+    usernamePassword(credentialsId: 'jenkins-api', usernameVariable: 'JENKINS_CREDS_USR', passwordVariable: 'JENKINS_CREDS_PSW')
+]) {
+    try {
+        stage('Checkout') {
+            git branch: 'Dev_Sondas', url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git' // URL de tu GitHub
+        }
 
-      stage('Mostrar datos recibidos') {
-          steps {
-              echo "🔔 ALERTA: ${params.ALERT_NAME}"
-              echo "📧 Desde: ${params.EMAIL_FROM}"
-              echo "📄 Asunto: ${params.EMAIL_SUBJECT}"
-              echo "📝 Cuerpo: ${params.EMAIL_BODY}"
-          }
-      }
+        stage('Preparar entorno') {
+            sh '''
+                set -e
+                python3 -m venv venv
+                ./venv/bin/pip install --upgrade pip
+                ./venv/bin/pip install -r requirements.txt
+            '''
+        }
 
-      stage('Ejecutar dispatcher / script') {
-          steps {
-              sh """
-                  ./venv/bin/python src/runner.py \
-                      --script "${params.SCRIPT_NAME}" \
-                      --profile "$WORKSPACE/profiles/selenium_cert" \
-                      --alert-name "${params.ALERT_NAME}" \
-                      --from-email "${params.EMAIL_FROM}" \
-                      --subject "${params.EMAIL_SUBJECT}" \
-                      --body "${params.EMAIL_BODY}"
-              """
-          }
-      }
-  }
+        stage('Ejecutar dispatcher / script') {
+            script {
+                def scriptName = params.SCRIPT_NAME ?: 'acces_frontal_emd'
 
-  post {
-      always {
-          echo "✅ Pipeline finalizado."
-          archiveArtifacts artifacts: '**/status.txt', allowEmptyArchive: true
-          emailext(
-              subject: "Resultado del Job ${env.JOB_NAME}",
-              body: "El job ha finalizado. Revisa el archivo status.txt para más detalles.",
-              to: "ecommerceoperaciones01@gmail.com"
-          )
-      }
-  }
+                // Ejecutar directamente con parámetros del correo
+                sh """
+                    set -e
+                    ./venv/bin/python src/runner.py \
+                        --script "${scriptName}" \
+                        --profile "$WORKSPACE/profiles/selenium_cert" \
+                        --alert-name "${params.ALERT_NAME}" \
+                        --from-email "${params.EMAIL_FROM}" \
+                        --subject "${params.EMAIL_SUBJECT}" \
+                        --body "${params.EMAIL_BODY}"
+                """
+            }
+        }
+
+        stage('Verificar estado') {
+            script {
+                def statusPath = "${WORKSPACE}/status.txt"
+
+                if (!fileExists(statusPath)) {
+                    currentBuild.result = 'FAILURE'
+                    error("Falta status.txt")
+                }
+
+                def status = readFile(statusPath).trim()
+                def retryCount = params.RETRY_COUNT.toInteger()
+
+                if (status == "falso_positivo") {
+                    if (retryCount >= 1) {
+                        currentBuild.result = 'SUCCESS'
+                    } else {
+                        currentBuild.result = 'SUCCESS'
+                        sleep(time: 1, unit: 'MINUTES')
+                        build job: env.JOB_NAME,
+                              parameters: [
+                                  string(name: 'RETRY_COUNT', value: (retryCount + 1).toString()),
+                                  string(name: 'SCRIPT_NAME', value: params.SCRIPT_NAME),
+                                  string(name: 'ALERT_NAME', value: params.ALERT_NAME),
+                                  string(name: 'EMAIL_FROM', value: params.EMAIL_FROM),
+                                  string(name: 'EMAIL_SUBJECT', value: params.EMAIL_SUBJECT),
+                                  text(name: 'EMAIL_BODY', value: params.EMAIL_BODY)
+                              ],
+                              wait: false
+                    }
+                } else if (status == "alarma_confirmada") {
+                    currentBuild.result = 'FAILURE'
+                } else {
+                    currentBuild.result = 'FAILURE'
+                }
+            }
+        }
+
+    } catch (err) {
+        currentBuild.result = 'FAILURE'
+        error("Pipeline detenido: ${err}")
+    } finally {
+        stage('Post - Archivar') {
+            script {
+                def run_id = fileExists("${WORKSPACE}/current_run.txt") ? readFile("${WORKSPACE}/current_run.txt").trim() : ""
+
+                if (run_id) {
+                    archiveArtifacts artifacts: "runs/${run_id}/**", allowEmptyArchive: true
+                }
+            }
+        }
+    }
+}
 }

@@ -19,7 +19,6 @@ def main():
       default=os.path.join(WORKSPACE, "profiles", "selenium_cert"),
       help="Ruta al perfil de selenium (opcional)"
   )
-  # Nuevos parámetros para datos del correo
   parser.add_argument("--alert-name", help="Nombre de la alerta detectada")
   parser.add_argument("--from-email", help="Remitente del correo")
   parser.add_argument("--subject", help="Asunto del correo")
@@ -44,7 +43,7 @@ def main():
   # Construir comando para ejecutar el script
   cmd = [sys.executable, script_abspath, args.profile]
 
-  # Si el script necesita los datos del correo, se los pasamos como argumentos
+  # Pasar los datos del correo como argumentos adicionales
   if args.alert_name:
       cmd.append(args.alert_name)
   if args.from_email:
