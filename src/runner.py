@@ -26,6 +26,12 @@ def main():
 
   args = parser.parse_args()
 
+  # Si no se pasan por CLI, leer de variables de entorno
+  alert_name = args.alert_name or os.getenv("ALERT_NAME", "")
+  from_email = args.from_email or os.getenv("EMAIL_FROM", "")
+  subject = args.subject or os.getenv("EMAIL_SUBJECT", "")
+  body = args.body or os.getenv("EMAIL_BODY", "")
+
   # Validar que el script existe en el registry
   try:
       script_relpath = load_script_path(args.script)
@@ -41,17 +47,7 @@ def main():
   print(f"[INFO] Ejecutando script: {script_abspath}")
 
   # Construir comando para ejecutar el script
-  cmd = [sys.executable, script_abspath, args.profile]
-
-  # Pasar los datos del correo como argumentos adicionales
-  if args.alert_name:
-      cmd.append(args.alert_name)
-  if args.from_email:
-      cmd.append(args.from_email)
-  if args.subject:
-      cmd.append(args.subject)
-  if args.body:
-      cmd.append(args.body)
+  cmd = [sys.executable, script_abspath, args.profile, alert_name, from_email, subject, body]
 
   try:
       proc = subprocess.run(cmd, check=False)

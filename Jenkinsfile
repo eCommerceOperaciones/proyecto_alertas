@@ -47,19 +47,20 @@ withCredentials([
         }
 
         stage('Ejecutar dispatcher / script') {
-            script {
-                def scriptName = params.SCRIPT_NAME ?: 'acces_frontal_emd'
-                echo "▶ Ejecutando runner para SCRIPT_NAME=${scriptName}"
-                sh """set -e
+          steps {
+              withEnv([
+                  "ALERT_NAME=${params.ALERT_NAME}",
+                  "EMAIL_FROM=${params.EMAIL_FROM}",
+                  "EMAIL_SUBJECT=${params.EMAIL_SUBJECT}",
+                  "EMAIL_BODY=${params.EMAIL_BODY}"
+              ]) {
+                  sh """
                       ./venv/bin/python src/runner.py \
-                          --script '${scriptName}' \
-                          --profile '$WORKSPACE/profiles/selenium_cert' \
-                          --alert-name '${params.ALERT_NAME}' \
-                          --from-email '${params.EMAIL_FROM}' \
-                          --subject '${params.EMAIL_SUBJECT}' \
-                          --body '${params.EMAIL_BODY}'
-                    """
-            }
+                          --script ${params.SCRIPT_NAME} \
+                          --profile "$WORKSPACE/profiles/selenium_cert"
+                  """
+              }
+          }
         }
 
         stage('Verificar estado') {
