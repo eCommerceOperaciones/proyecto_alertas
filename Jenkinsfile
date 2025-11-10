@@ -132,16 +132,23 @@ node('main') {
               def status = readFile("${WORKSPACE}/status.txt").trim()
               if (currentBuild.result == 'FAILURE') {
                   if (status == "alarma_confirmada") {
-                      emailext(
-                          subject: "🚨 Alarma ${params.SCRIPT_NAME} confirmada",
-                          body: """<p>Se ha confirmado la alarma <b>${params.SCRIPT_NAME}</b>.</p>
-                                   <p>Revisa la carpeta de ejecución para logs y capturas.</p>
-                                   <p><b>Log de Jenkins:</b> <a href="${env.BUILD_URL}console">${env.BUILD_URL}console</a></p>""",
-                          mimeType: 'text/html',
-                          to: "ecommerceoperaciones01@gmail.com",
-                          attachmentsPattern: run_id ? "runs/${run_id}/logs/*.log, runs/${run_id}/screenshots/*.png" : ""
-                      )
-                  } else {
+                     def htmlBody = sh(
+                         script: """
+                             SCRIPT_NAME=${params.SCRIPT_NAME} \
+                             EMAIL_BODY="${params.EMAIL_BODY.replace('"','\\"')}" \
+                             ./venv/bin/python utils/generate_email.py
+                         """,
+                         returnStdout: true
+                     ).trim()
+                    
+                     emailext(
+                         subject: "🚨 Alarma ${params.SCRIPT_NAME} confirmada",
+                         body: htmlBody,
+                         mimeType: 'text/html',
+                         to: "ecommerceoperaciones01@gmail.com",
+                         attachmentsPattern: run_id ? "runs/${run_id}/logs/*.log, runs/${run_id}/screenshots/*.png" : ""
+                     )
+                     } else {
                       emailext(
                           subject: "❌ Error técnico en ejecución de ${params.SCRIPT_NAME}",
                           body: """<p>El script <b>${params.SCRIPT_NAME}</b> falló por error técnico.</p>

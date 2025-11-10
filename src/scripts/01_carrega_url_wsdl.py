@@ -3,7 +3,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
 from selenium.common.exceptions import NoSuchElementException
-import os, sys, time, re
+import os, sys, time
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -64,24 +64,6 @@ def print_email_data():
   log("info", f"Cuerpo: {EMAIL_BODY}")
 
 # =========================
-# Extraer fecha de inicio del cuerpo
-# =========================
-def extract_fecha_inicio(body):
-  match = re.search(r"Inici:\s*(\d{2}/\d{2}/\d{4}\s+\d{2}:\d{2})", body)
-  return match.group(1) if match else "Desconegut"
-
-# =========================
-# Simular envío de correo
-# =========================
-def simulate_email_send():
-  fecha_inicio = extract_fecha_inicio(EMAIL_BODY)
-  log("info", "=== Simulación de envío de correo ===")
-  log("info", f"Asunto: 🚨 Alarma {ALERT_NAME} confirmada")
-  log("info", f"Fecha de inicio detectada: {fecha_inicio}")
-  log("info", "Cuerpo del correo:")
-  log("info", f"Incidència a la plataforma Gencat serveis i tràmits (GSIT)\nInici: {fecha_inicio}\nFi: Desconegut\nServeis no operatius: ...")
-
-# =========================
 # Driver
 # =========================
 def setup_driver() -> webdriver.Firefox:
@@ -124,7 +106,7 @@ def run_automation():
           except NoSuchElementException:
               logo = None
 
-      # 🔄 Lógica invertida para debug:
+      # Modo debug: si encuentra logo → alarma_confirmada
       if logo:
           log("info", "Logo encontrado → Marcando como ALARMA_CONFIRMADA (modo debug)")
           save_screenshot(driver, "google_logo")
@@ -149,14 +131,9 @@ if __name__ == "__main__":
   success = run_automation()
   final_status = "falso_positivo" if success else "alarma_confirmada"
 
-  # Guardar status
   with open(os.path.join(logs_dir, "status.txt"), "w") as f:
       f.write(final_status)
   with open(os.path.join(WORKSPACE, "status.txt"), "w") as f:
       f.write(final_status)
-
-  # Si es alarma_confirmada → simular envío de correo
-  if final_status == "alarma_confirmada":
-      simulate_email_send()
 
   sys.exit(0 if success else 1)
