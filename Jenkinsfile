@@ -1,4 +1,3 @@
-// Jenkinsfile - Pipeline optimizado para ejecución de scripts de alerta
 pipeline {
   agent { label 'main' }
 
@@ -76,7 +75,8 @@ pipeline {
                       ${PYTHON_VENV}/bin/python src/runner.py \
                           --script ${params.SCRIPT_NAME} \
                           --profile "$WORKSPACE/profiles/selenium_cert" \
-                          --retry ${params.RETRY_COUNT}
+                          --retry ${params.RETRY_COUNT} \
+                          --max-retries ${params.MAX_RETRIES}
                   """
               }
           }
@@ -97,9 +97,41 @@ pipeline {
 
                   if (status == "falso_positivo") {
                       if (retryCount >= maxRetries) {
-                          echo "Máximo de reintentos alcanzado. No se relanzará."
+                          echo "Máximo de reintentos alcanzado. Enviando correo interno de cierre..."
+
+                          // Extraer fecha/hora de recepción desde EMAIL_BODY
+                          def fechaRecepcion = "Fecha no disponible"
+                          def match = (params.EMAIL_BODY =~ /Recepció:\s*(.*)/)
+                          if (match) {
+                              fechaRecepcion = match[0][1]
+                          }
+
+                          // Construir cuerpo HTML profesional
+                          def htmlBody = """
+                              <html>
+                              <body style="font-family: Arial, sans-serif; color: #333;">
+                                  <h2 style="color: #2E86C1;">Informe de revisión de alerta</h2>
+                                  <p>La alerta <strong>${params.ALERT_NAME}</strong> fue revisada en dos ocasiones en un periodo de 5 minutos tras su recepción.</p>
+                                  <p><strong>Fecha y hora de recepción:</strong> ${fechaRecepcion}</p>
+                                  <p>Resultado de ambas revisiones: <span style="color: green; font-weight: bold;">FALSO POSITIVO</span></p>
+                                  <p>Se adjuntan los logs y capturas de pantalla de las ejecuciones para su registro.</p>
+                                  <hr>
+                                  <p style="font-size: 12px; color: #888;">Este mensaje es interno y confidencial. No debe ser reenviado fuera de la organización.</p>
+                              </body>
+                              </html>
+                          """
+
+                          emailext(
+                              subject: "🔍 Informe interno - Alerta ${params.ALERT_NAME} revisada dos veces (Falso Positivo)",
+                              body: htmlBody,
+                              mimeType: 'text/html',
+                              to: "equipo.alertas@empresa.com",
+                              attachmentsPattern: "runs/**/logs/*.log, runs/**/screenshots/*.png"
+                          )
+
                       } else {
                           echo "Programando reintento..."
+                          sleep(time: 5, unit: "MINUTES") // Espera 5 minutos antes del segundo intento
                           build job: env.JOB_NAME,
                               parameters: [
                                   string(name: 'RETRY_COUNT', value: (retryCount + 1).toString()),
