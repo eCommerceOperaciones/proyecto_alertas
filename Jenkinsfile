@@ -51,14 +51,14 @@ withCredentials([
                 def scriptName = params.SCRIPT_NAME ?: 'acces_frontal_emd'
                 echo "▶ Ejecutando runner para SCRIPT_NAME=${scriptName}"
                 sh """set -e
-                    ./venv/bin/python src/runner.py \
-                        --script "${scriptName}" \
-                        --profile "$WORKSPACE/profiles/selenium_cert" \
-                        --alert-name "${params.ALERT_NAME}" \
-                        --from-email "${params.EMAIL_FROM}" \
-                        --subject "${params.EMAIL_SUBJECT}" \
-                        --body "${params.EMAIL_BODY}"
-                """
+                      ./venv/bin/python src/runner.py \
+                          --script '${scriptName}' \
+                          --profile '$WORKSPACE/profiles/selenium_cert' \
+                          --alert-name '${params.ALERT_NAME}' \
+                          --from-email '${params.EMAIL_FROM}' \
+                          --subject '${params.EMAIL_SUBJECT}' \
+                          --body '${params.EMAIL_BODY}'
+                    """
             }
         }
 
