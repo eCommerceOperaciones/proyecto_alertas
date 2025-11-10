@@ -9,20 +9,15 @@ WORKSPACE = os.getenv("WORKSPACE", os.getcwd())
 
 def main():
   parser = argparse.ArgumentParser(description="Dispatcher de scripts de automatización")
-  parser.add_argument(
-      "--script",
-      required=True,
-      help="Nombre del script a ejecutar (según registry)"
-  )
-  parser.add_argument(
-      "--profile",
-      default=os.path.join(WORKSPACE, "profiles", "selenium_cert"),
-      help="Ruta al perfil de selenium (opcional)"
-  )
+  parser.add_argument("--script", required=True, help="Nombre del script a ejecutar (según registry)")
+  parser.add_argument("--profile", default=os.path.join(WORKSPACE, "profiles", "selenium_cert"),
+                      help="Ruta al perfil de selenium (opcional)")
   parser.add_argument("--alert-name", help="Nombre de la alerta detectada")
   parser.add_argument("--from-email", help="Remitente del correo")
   parser.add_argument("--subject", help="Asunto del correo")
   parser.add_argument("--body", help="Cuerpo del correo")
+  parser.add_argument("--retry", type=int, default=0, help="Número de reintentos ejecutados")
+  parser.add_argument("--max-retries", type=int, default=1, help="Número máximo de reintentos permitidos")
 
   args = parser.parse_args()
 
@@ -32,17 +27,22 @@ def main():
   subject = args.subject or os.getenv("EMAIL_SUBJECT", "")
   body = args.body or os.getenv("EMAIL_BODY", "")
 
+  print(f"[INFO] Script: {args.script}")
+  print(f"[INFO] Perfil Selenium: {args.profile}")
+  print(f"[INFO] Alerta: {alert_name}")
+  print(f"[INFO] Retry actual: {args.retry} / Máx: {args.max_retries}")
+
   # Validar que el script existe en el registry
   try:
       script_relpath = load_script_path(args.script)
   except Exception as e:
       print(f"[ERROR] {e}")
-      sys.exit(1)
+      sys.exit(2)  # Error técnico
 
   script_abspath = os.path.join(WORKSPACE, script_relpath)
   if not os.path.exists(script_abspath):
       print(f"[ERROR] Script no encontrado en: {script_abspath}")
-      sys.exit(1)
+      sys.exit(2)
 
   print(f"[INFO] Ejecutando script: {script_abspath}")
 
@@ -55,7 +55,7 @@ def main():
       print(f"[INFO] Proceso finalizado con código: {rc}")
   except Exception as e:
       print(f"[ERROR] Fallo al ejecutar el script: {e}")
-      rc = 1
+      sys.exit(2)
 
   # Leer status.txt que crea el script
   status_file = os.path.join(WORKSPACE, "status.txt")
@@ -73,13 +73,16 @@ def main():
       print(f"[INFO] status.txt => {status}")
   else:
       print("[ERROR] status.txt no encontrado o vacío")
-      sys.exit(1)  # Error técnico si no hay status.txt
+      sys.exit(2)  # Error técnico
 
-  # Salida: 0 si éxito (falso_positivo), 1 si alarma_confirmada o error
+  # Salida según estado
   if status == "falso_positivo":
-      sys.exit(0)
+      sys.exit(0)  # Éxito, pero requiere posible reintento
+  elif status == "alarma_confirmada":
+      sys.exit(1)  # Alarma confirmada
   else:
-      sys.exit(1)
+      print(f"[ERROR] Estado desconocido: {status}")
+      sys.exit(2)  # Error técnico
 
 if __name__ == "__main__":
   main()
