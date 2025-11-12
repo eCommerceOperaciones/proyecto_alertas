@@ -1,11 +1,13 @@
+import os
+import sys
+import time
+from datetime import datetime
+from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
 from selenium.common.exceptions import NoSuchElementException
-import os, sys, time
-from datetime import datetime
-from dotenv import load_dotenv
 
 # =========================
 # Cargar .env
@@ -16,7 +18,7 @@ if os.path.exists(ENV_PATH):
 
 WORKSPACE = os.getenv("WORKSPACE", os.getcwd())
 
-# Argumentos esperados:
+# Argumentos esperados
 FIREFOX_PROFILE_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(WORKSPACE, "profiles", "selenium_cert")
 ALERT_NAME = sys.argv[2] if len(sys.argv) > 2 else ""
 FROM_EMAIL = sys.argv[3] if len(sys.argv) > 3 else ""
@@ -87,6 +89,17 @@ def setup_driver() -> webdriver.Firefox:
   return driver
 
 # =========================
+# Escritura de status.txt
+# =========================
+def write_status(status_value):
+  # En carpeta de logs
+  with open(os.path.join(logs_dir, "status.txt"), "w") as f:
+      f.write(status_value)
+  # En workspace para Jenkins
+  with open(os.path.join(WORKSPACE, "status.txt"), "w") as f:
+      f.write(status_value)
+
+# =========================
 # Flujo principal
 # =========================
 def run_automation():
@@ -110,16 +123,19 @@ def run_automation():
       if logo:
           log("info", "Logo encontrado → Marcando como ALARMA_CONFIRMADA (modo debug)")
           save_screenshot(driver, "google_logo")
+          write_status("alarma_confirmada")
           return False  # False = alarma_confirmada
       else:
           log("info", "Logo NO encontrado → Marcando como FALSO_POSITIVO (modo debug)")
           save_screenshot(driver, "logo_no_encontrado")
+          write_status("falso_positivo")
           return True   # True = falso_positivo
 
   except Exception as e:
       log("error", f"Error crítico: {e}")
       if driver:
           save_screenshot(driver, "error_critico")
+      write_status("alarma_confirmada")
       return False
   finally:
       if driver:
@@ -127,13 +143,11 @@ def run_automation():
 
 if __name__ == "__main__":
   print_email_data()
-
   success = run_automation()
-  final_status = "falso_positivo" if success else "alarma_confirmada"
 
-  with open(os.path.join(logs_dir, "status.txt"), "w") as f:
-      f.write(final_status)
-  with open(os.path.join(WORKSPACE, "status.txt"), "w") as f:
-      f.write(final_status)
-
-  sys.exit(0 if success else 1)
+  if success:
+      log("info", "=== JOB SUCCESS: falso_positivo ===")
+      sys.exit(0)  # Código 0 para que Jenkins decida si reintenta
+  else:
+      log("error", "=== JOB FAILURE: alarma_confirmada ===")
+      sys.exit(0)  # Código 0 para que Jenkins continúe flujo alerta real

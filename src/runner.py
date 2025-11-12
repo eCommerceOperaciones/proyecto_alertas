@@ -77,6 +77,7 @@ def main():
   os.makedirs(screenshots_dir, exist_ok=True)
 
   log_file = os.path.join(logs_dir, "execution.log")
+  status_file_workspace = os.path.join(WORKSPACE, "status.txt")  # Unificado para Jenkins
 
   # =========================
   # Ejecutar script de alerta
@@ -93,32 +94,34 @@ def main():
       sys.exit(2)  # Error técnico
 
   # =========================
-  # Leer status.txt
+  # Leer status.txt generado por el script
   # =========================
-  status_file = os.path.join(WORKSPACE, "status.txt")
   status = None
-  if os.path.exists(status_file):
+  if os.path.exists(status_file_workspace):
       try:
-          with open(status_file, "r") as f:
+          with open(status_file_workspace, "r") as f:
               status = f.read().strip()
       except Exception as e:
           logging.warning(f"No se pudo leer status.txt: {e}")
   else:
-      logging.warning("status.txt no encontrado")
+      logging.error("status.txt no encontrado en workspace")
+      sys.exit(2)  # Error técnico
 
   if status:
       logging.info(f"status.txt => {status}")
   else:
-      logging.error("status.txt no encontrado o vacío")
+      logging.error("status.txt vacío")
       sys.exit(2)  # Error técnico
 
   # =========================
   # Códigos de salida para Jenkins
   # =========================
   if status == "falso_positivo":
-      sys.exit(0)  # Éxito, pero requiere posible reintento
+      logging.info("Resultado: falso_positivo → Jenkins decidirá si reintenta")
+      sys.exit(0)  # Éxito, posible reintento
   elif status == "alarma_confirmada":
-      sys.exit(0)  # Éxito, continuar flujo alerta real
+      logging.info("Resultado: alarma_confirmada → Jenkins continuará flujo alerta real")
+      sys.exit(0)  # Éxito, alerta real
   else:
       logging.error(f"Estado desconocido: {status}")
       sys.exit(2)  # Error técnico

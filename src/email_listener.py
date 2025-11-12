@@ -23,8 +23,9 @@ logging.basicConfig(
 # ============================
 load_dotenv()
 
-IMAP_SERVER = "imap.gmail.com"
-IMAP_PORT = 993
+WORKSPACE = os.getenv("WORKSPACE", os.getcwd())
+IMAP_SERVER = os.getenv("IMAP_SERVER", "imap.gmail.com")
+IMAP_PORT = int(os.getenv("IMAP_PORT", "993"))
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 
@@ -140,31 +141,32 @@ def trigger_jenkins_job(script_name, alert_name, alert_type, alert_id, from_emai
       return False
 
 def check_email():
-  with IMAPClient(IMAP_SERVER, port=IMAP_PORT, ssl=True) as server:
-      server.login(EMAIL_USER, EMAIL_PASS)
-      server.select_folder("INBOX")
-      messages = server.search(["UNSEEN"])
-      logging.info(f"Correos no leídos: {len(messages)}")
+  try:
+      with IMAPClient(IMAP_SERVER, port=IMAP_PORT, ssl=True) as server:
+          server.login(EMAIL_USER, EMAIL_PASS)
+          server.select_folder("INBOX")
+          messages = server.search(["UNSEEN"])
+          logging.info(f"Correos no leídos: {len(messages)}")
 
-      for msgid, data in server.fetch(messages, ['RFC822']).items():
-          email_message = message_from_bytes(data[b'RFC822'])
-          from_email = email_message.get('From', '').lower()
-          subject_raw = email_message.get('Subject', '')
-          subject = decode_mime_words(subject_raw)
-          logging.info(f"Revisando correo de {from_email} | Asunto: {subject}")
-          body = parse_email_body(email_message)
-          alert_name, script_to_run, alert_type, alert_id = detect_alert(from_email, subject, body)
+          for msgid, data in server.fetch(messages, ['RFC822']).items():
+              email_message = message_from_bytes(data[b'RFC822'])
+              from_email = email_message.get('From', '').lower()
+              subject_raw = email_message.get('Subject', '')
+              subject = decode_mime_words(subject_raw)
+              logging.info(f"Revisando correo de {from_email} | Asunto: {subject}")
+              body = parse_email_body(email_message)
+              alert_name, script_to_run, alert_type, alert_id = detect_alert(from_email, subject, body)
 
-          if script_to_run:
-              trigger_jenkins_job(script_to_run, alert_name, alert_type, alert_id, from_email, subject, body)
-          else:
-              logging.info("No coincide con ninguna alerta configurada.")
+              # Marcar como leído
+              server.add_flags(msgid, ['\\Seen'])
+
+              if script_to_run:
+                  trigger_jenkins_job(script_to_run, alert_name, alert_type, alert_id, from_email, subject, body)
+              else:
+                  logging.info("No coincide con ninguna alerta configurada.")
+  except Exception as e:
+      logging.error(f"Error en check_email: {e}")
 
 if __name__ == "__main__":
-  logging.info("Listener de correo iniciado…")
-  while True:
-      try:
-          check_email()
-      except Exception as e:
-          logging.error(f"Error general del listener: {e}")
-      time.sleep(60)
+  logging.info("Listener de correo ejecutado desde Jenkins…")
+  check_email()
