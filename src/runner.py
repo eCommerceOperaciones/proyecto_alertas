@@ -6,24 +6,15 @@ import logging
 from datetime import datetime
 from dispatcher.loader import load_script_path
 
-# =========================
-# Configuración de logging
-# =========================
 logging.basicConfig(
   level=logging.INFO,
   format="%(asctime)s [%(levelname)s] %(message)s",
   datefmt="%Y-%m-%d %H:%M:%S"
 )
 
-# =========================
-# Workspace de Jenkins
-# =========================
 WORKSPACE = os.getenv("WORKSPACE", os.getcwd())
 
 def main():
-  # =========================
-  # Argumentos del script
-  # =========================
   parser = argparse.ArgumentParser(description="Dispatcher de scripts de automatización")
   parser.add_argument("--script", required=True, help="Nombre del script a ejecutar (según registry)")
   parser.add_argument("--profile", default=os.path.join(WORKSPACE, "profiles", "selenium_cert"),
@@ -31,15 +22,12 @@ def main():
   parser.add_argument("--alert-name", help="Nombre de la alerta detectada")
   parser.add_argument("--from-email", help="Remitente del correo")
   parser.add_argument("--subject", help="Asunto del correo")
-  parser.add_argument("--body", help="Cuerpo del correo")
+  parser.add_argument("--body", help="Cuerpo del correo (opcional, puede venir de variable de entorno)")
   parser.add_argument("--retry", type=int, default=0, help="Número de reintentos ejecutados")
   parser.add_argument("--max-retries", type=int, default=1, help="Número máximo de reintentos permitidos")
 
   args = parser.parse_args()
 
-  # =========================
-  # Variables de entorno
-  # =========================
   alert_name = args.alert_name or os.getenv("ALERT_NAME", "")
   from_email = args.from_email or os.getenv("EMAIL_FROM", "")
   subject = args.subject or os.getenv("EMAIL_SUBJECT", "")
@@ -52,36 +40,26 @@ def main():
   logging.info(f"Retry actual: {args.retry} / Máx: {args.max_retries}")
   logging.info(f"ALERT_ID: {alert_id}")
 
-  # =========================
-  # Validar script en registry
-  # =========================
   try:
       script_relpath = load_script_path(args.script)
   except Exception as e:
       logging.error(e)
-      sys.exit(2)  # Error técnico
+      sys.exit(2)
 
   script_abspath = os.path.join(WORKSPACE, script_relpath)
   if not os.path.exists(script_abspath):
       logging.error(f"Script no encontrado en: {script_abspath}")
-      sys.exit(2)  # Error técnico
+      sys.exit(2)
 
-  # =========================
-  # Crear carpetas de ejecución
-  # =========================
   run_dir = os.path.join(WORKSPACE, "runs", alert_id)
   logs_dir = os.path.join(run_dir, "logs")
   screenshots_dir = os.path.join(run_dir, "screenshots")
-
   os.makedirs(logs_dir, exist_ok=True)
   os.makedirs(screenshots_dir, exist_ok=True)
 
   log_file = os.path.join(logs_dir, "execution.log")
-  status_file_workspace = os.path.join(WORKSPACE, "status.txt")  # Unificado para Jenkins
+  status_file_workspace = os.path.join(WORKSPACE, "status.txt")
 
-  # =========================
-  # Ejecutar script de alerta
-  # =========================
   cmd = [sys.executable, script_abspath, args.profile, alert_name, from_email, subject, body]
 
   try:
@@ -91,11 +69,8 @@ def main():
       logging.info(f"Proceso finalizado con código: {rc}")
   except Exception as e:
       logging.error(f"Fallo al ejecutar el script: {e}")
-      sys.exit(2)  # Error técnico
+      sys.exit(2)
 
-  # =========================
-  # Leer status.txt generado por el script
-  # =========================
   status = None
   if os.path.exists(status_file_workspace):
       try:
@@ -105,26 +80,23 @@ def main():
           logging.warning(f"No se pudo leer status.txt: {e}")
   else:
       logging.error("status.txt no encontrado en workspace")
-      sys.exit(2)  # Error técnico
+      sys.exit(2)
 
   if status:
       logging.info(f"status.txt => {status}")
   else:
       logging.error("status.txt vacío")
-      sys.exit(2)  # Error técnico
+      sys.exit(2)
 
-  # =========================
-  # Códigos de salida para Jenkins
-  # =========================
   if status == "falso_positivo":
       logging.info("Resultado: falso_positivo → Jenkins decidirá si reintenta")
-      sys.exit(0)  # Éxito, posible reintento
+      sys.exit(0)
   elif status == "alarma_confirmada":
       logging.info("Resultado: alarma_confirmada → Jenkins continuará flujo alerta real")
-      sys.exit(0)  # Éxito, alerta real
+      sys.exit(0)
   else:
       logging.error(f"Estado desconocido: {status}")
-      sys.exit(2)  # Error técnico
+      sys.exit(2)
 
 if __name__ == "__main__":
   main()

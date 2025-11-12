@@ -16,7 +16,7 @@ pipeline {
   environment {
       WORKSPACE_BIN = "${WORKSPACE}/bin"
       PYTHON_VENV = "${WORKSPACE}/venv"
-      SHARED_EXCEL = "${WORKSPACE}/alertas.xlsx" // Cambiado para WSL
+      SHARED_EXCEL = "${WORKSPACE}/alertas.xlsx"
   }
 
   stages {
@@ -55,66 +55,24 @@ pipeline {
 
       stage('Ejecutar script de alerta') {
           steps {
-              sh """
-                  ${PYTHON_VENV}/bin/python src/runner.py \
-                      --script ${params.SCRIPT_NAME} \
-                      --profile "$WORKSPACE/profiles/selenium_cert" \
-                      --alert-name "${params.ALERT_NAME}" \
-                      --from-email "${params.EMAIL_FROM}" \
-                      --subject "${params.EMAIL_SUBJECT}" \
-                      --body "${params.EMAIL_BODY}" \
-                      --retry ${params.RETRY_COUNT} \
-                      --max-retries ${params.MAX_RETRIES}
-              """
+              withEnv([
+                  "ALERT_NAME=${params.ALERT_NAME}",
+                  "ALERT_TYPE=${params.ALERT_TYPE}",
+                  "ALERT_ID=${params.ALERT_ID}",
+                  "EMAIL_FROM=${params.EMAIL_FROM}",
+                  "EMAIL_SUBJECT=${params.EMAIL_SUBJECT}",
+                  "EMAIL_BODY=${params.EMAIL_BODY}"
+              ]) {
+                  sh """
+                      ${PYTHON_VENV}/bin/python src/runner.py \
+                          --script ${params.SCRIPT_NAME} \
+                          --profile "$WORKSPACE/profiles/selenium_cert" \
+                          --retry ${params.RETRY_COUNT} \
+                          --max-retries ${params.MAX_RETRIES}
+                  """
+              }
           }
       }
-      
-      stage('Ejecutar script de alerta con reintento') {
-  steps {
-      script {
-          def retries = params.RETRY_COUNT.toInteger()
-          def maxRetries = params.MAX_RETRIES.toInteger()
-          def statusFile = "${WORKSPACE}/status.txt"
-
-          // Ejecutar runner.py
-          sh """
-              ${PYTHON_VENV}/bin/python src/runner.py \
-                  --script ${params.SCRIPT_NAME} \
-                  --profile "$WORKSPACE/profiles/selenium_cert" \
-                  --alert-name "${params.ALERT_NAME}" \
-                  --from-email "${params.EMAIL_FROM}" \
-                  --subject "${params.EMAIL_SUBJECT}" \
-                  --body "${params.EMAIL_BODY}" \
-                  --retry ${retries} \
-                  --max-retries ${maxRetries}
-          """
-
-          // Leer status.txt
-          def status = readFile(statusFile).trim()
-          echo "Estado devuelto por script: ${status}"
-
-          if (status == "falso_positivo" && retries < maxRetries) {
-              echo "Falso positivo detectado. Reintentando en 5 minutos..."
-              sleep(time: 5, unit: "MINUTES")
-              // Relanzar el mismo stage con RETRY_COUNT incrementado
-              build job: env.JOB_NAME, parameters: [
-                  string(name: 'SCRIPT_NAME', value: params.SCRIPT_NAME),
-                  string(name: 'RETRY_COUNT', value: "${retries + 1}"),
-                  string(name: 'ALERT_NAME', value: params.ALERT_NAME),
-                  string(name: 'ALERT_TYPE', value: params.ALERT_TYPE),
-                  string(name: 'ALERT_ID', value: params.ALERT_ID),
-                  string(name: 'EMAIL_FROM', value: params.EMAIL_FROM),
-                  string(name: 'EMAIL_SUBJECT', value: params.EMAIL_SUBJECT),
-                  text(name: 'EMAIL_BODY', value: params.EMAIL_BODY),
-                  string(name: 'MAX_RETRIES', value: params.MAX_RETRIES)
-              ]
-              // Terminar este build para que el nuevo se encargue
-              currentBuild.result = 'SUCCESS'
-          }
-      }
-  }
-}
-
 
       stage('Generar correo y actualizar Excel') {
           steps {
@@ -122,7 +80,7 @@ pipeline {
                   sh """
                       ${PYTHON_VENV}/bin/python -c "
 from utils.email_generator import generate_email_and_excel_fields
-from utils.excel_manager import add_alert, close_alert, SHARED_EXCEL_PATH
+from utils.excel_manager import add_alert, close_alert
 import os
 
 html, fields = generate_email_and_excel_fields(
