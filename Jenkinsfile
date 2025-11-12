@@ -1,5 +1,9 @@
 pipeline {
   agent { label 'main' }
+
+  // =========================
+  // Parámetros del pipeline
+  // =========================
   parameters {
       string(name: 'SCRIPT_NAME', defaultValue: '', description: 'Nombre lógico del script registrado en dispatcher')
       string(name: 'RETRY_COUNT', defaultValue: '0', description: 'Contador de reintentos automáticos')
@@ -11,12 +15,21 @@ pipeline {
       text(name: 'EMAIL_BODY', defaultValue: '', description: 'Contenido del correo')
       string(name: 'MAX_RETRIES', defaultValue: '1', description: 'Número máximo de reintentos permitidos')
   }
+
+  // =========================
+  // Variables de entorno
+  // =========================
   environment {
       WORKSPACE_BIN = "${WORKSPACE}/bin"
       PYTHON_VENV = "${WORKSPACE}/venv"
       SHARED_EXCEL = "/var/lib/jenkins/shared/alertas.xlsx"
   }
+
   stages {
+
+      // =========================
+      // Validación inicial
+      // =========================
       stage('Validar parámetros y credenciales') {
           steps {
               script {
@@ -32,11 +45,19 @@ pipeline {
               }
           }
       }
+
+      // =========================
+      // Checkout del código
+      // =========================
       stage('Checkout') {
           steps {
               git branch: 'Dev_Sondas', url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git'
           }
       }
+
+      // =========================
+      // Preparar entorno Python + Selenium
+      // =========================
       stage('Preparar entorno') {
           steps {
               sh '''
@@ -59,6 +80,10 @@ pipeline {
               '''
           }
       }
+
+      // =========================
+      // Ejecutar script de alerta
+      // =========================
       stage('Ejecutar script') {
           steps {
               withEnv([
@@ -79,6 +104,10 @@ pipeline {
               }
           }
       }
+
+      // =========================
+      // Generar correos y actualizar Excel
+      // =========================
       stage('Generar correo y actualizar Excel') {
           steps {
               withEnv([
@@ -89,6 +118,7 @@ pipeline {
                   "EMAIL_BODY=${params.EMAIL_BODY}"
               ]) {
                   script {
+                      // Ejecutar Python para generar HTML y actualizar Excel
                       sh """
                           ${PYTHON_VENV}/bin/python -c "
 from utils.email_generator import generate_email_and_excel_fields
@@ -111,23 +141,29 @@ elif os.environ['ALERT_TYPE'] == 'RESUELTA':
   close_alert(fields)
 "
                       """
+
                       // Copiar Excel compartido al workspace para archivarlo
                       sh "cp ${SHARED_EXCEL} ${WORKSPACE}/alertas.xlsx"
-                      archiveArtifacts artifacts: "alertas.xlsx", allowEmptyArchive: false
 
+                      // Archivar todos los archivos relevantes de esta ejecución
+                      archiveArtifacts artifacts: "alertas.xlsx, runs/${params.ALERT_ID}/logs/*.log, runs/${params.ALERT_ID}/screenshots/*.png", allowEmptyArchive: false
+
+                      // 📤 Correo externo (plantilla HTML)
                       emailext(
                           subject: "Alerta ${params.ALERT_NAME} (${params.ALERT_TYPE})",
                           body: readFile('email_body.html') + "<p><b>Excel de alertas:</b> <a href='${env.BUILD_URL}artifact/alertas.xlsx'>Ver archivo</a></p>",
                           mimeType: 'text/html',
                           to: "ecommerceoperaciones01@gmail.com"
                       )
+
+                      // 📤 Correo interno (logs, capturas y Excel)
                       emailext(
                           subject: "📄 Informe interno - Alerta ${params.ALERT_NAME} (${params.ALERT_TYPE})",
                           body: """<p>Se adjuntan logs y capturas de la ejecución.</p>
                                    <p><b>Excel de alertas:</b> <a href='${env.BUILD_URL}artifact/alertas.xlsx'>Ver archivo</a></p>""",
                           mimeType: 'text/html',
                           to: "ecommerceoperaciones01@gmail.com",
-                          attachmentsPattern: "runs/${params.ALERT_ID}/logs/*.log, runs/${params.ALERT_ID}/screenshots/*.png"
+                          attachmentsPattern: "runs/${params.ALERT_ID}/logs/*.log, runs/${params.ALERT_ID}/screenshots/*.png, alertas.xlsx"
                       )
                   }
               }

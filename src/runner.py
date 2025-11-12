@@ -6,15 +6,24 @@ import logging
 from datetime import datetime
 from dispatcher.loader import load_script_path
 
+# =========================
+# Configuración de logging
+# =========================
 logging.basicConfig(
   level=logging.INFO,
   format="%(asctime)s [%(levelname)s] %(message)s",
   datefmt="%Y-%m-%d %H:%M:%S"
 )
 
+# =========================
+# Workspace de Jenkins
+# =========================
 WORKSPACE = os.getenv("WORKSPACE", os.getcwd())
 
 def main():
+  # =========================
+  # Argumentos del script
+  # =========================
   parser = argparse.ArgumentParser(description="Dispatcher de scripts de automatización")
   parser.add_argument("--script", required=True, help="Nombre del script a ejecutar (según registry)")
   parser.add_argument("--profile", default=os.path.join(WORKSPACE, "profiles", "selenium_cert"),
@@ -28,6 +37,9 @@ def main():
 
   args = parser.parse_args()
 
+  # =========================
+  # Variables de entorno
+  # =========================
   alert_name = args.alert_name or os.getenv("ALERT_NAME", "")
   from_email = args.from_email or os.getenv("EMAIL_FROM", "")
   subject = args.subject or os.getenv("EMAIL_SUBJECT", "")
@@ -40,6 +52,9 @@ def main():
   logging.info(f"Retry actual: {args.retry} / Máx: {args.max_retries}")
   logging.info(f"ALERT_ID: {alert_id}")
 
+  # =========================
+  # Validar script en registry
+  # =========================
   try:
       script_relpath = load_script_path(args.script)
   except Exception as e:
@@ -51,13 +66,21 @@ def main():
       logging.error(f"Script no encontrado en: {script_abspath}")
       sys.exit(2)  # Error técnico
 
-  # Carpeta única por ALERT_ID
+  # =========================
+  # Crear carpetas de ejecución
+  # =========================
   run_dir = os.path.join(WORKSPACE, "runs", alert_id)
-  os.makedirs(os.path.join(run_dir, "logs"), exist_ok=True)
-  os.makedirs(os.path.join(run_dir, "screenshots"), exist_ok=True)
+  logs_dir = os.path.join(run_dir, "logs")
+  screenshots_dir = os.path.join(run_dir, "screenshots")
 
-  log_file = os.path.join(run_dir, "logs", "execution.log")
+  os.makedirs(logs_dir, exist_ok=True)
+  os.makedirs(screenshots_dir, exist_ok=True)
 
+  log_file = os.path.join(logs_dir, "execution.log")
+
+  # =========================
+  # Ejecutar script de alerta
+  # =========================
   cmd = [sys.executable, script_abspath, args.profile, alert_name, from_email, subject, body]
 
   try:
@@ -69,6 +92,9 @@ def main():
       logging.error(f"Fallo al ejecutar el script: {e}")
       sys.exit(2)  # Error técnico
 
+  # =========================
+  # Leer status.txt
+  # =========================
   status_file = os.path.join(WORKSPACE, "status.txt")
   status = None
   if os.path.exists(status_file):
@@ -86,13 +112,16 @@ def main():
       logging.error("status.txt no encontrado o vacío")
       sys.exit(2)  # Error técnico
 
+  # =========================
+  # Códigos de salida para Jenkins
+  # =========================
   if status == "falso_positivo":
-      sys.exit(0)
+      sys.exit(0)  # Éxito, pero requiere posible reintento
   elif status == "alarma_confirmada":
-      sys.exit(0)
+      sys.exit(0)  # Éxito, continuar flujo alerta real
   else:
       logging.error(f"Estado desconocido: {status}")
-      sys.exit(2)
+      sys.exit(2)  # Error técnico
 
 if __name__ == "__main__":
   main()
