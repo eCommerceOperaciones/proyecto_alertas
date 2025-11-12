@@ -80,24 +80,20 @@ pipeline {
           }
       }
       stage('Generar correo y actualizar Excel') {
-          steps {
-              withEnv([
-                  "SCRIPT_NAME=${params.SCRIPT_NAME}",
-                  "ALERT_NAME=${params.ALERT_NAME}",
-                  "ALERT_TYPE=${params.ALERT_TYPE}",
-                  "ALERT_ID=${params.ALERT_ID}",
-                  "EMAIL_BODY=${params.EMAIL_BODY}"
-              ]) {
-                  script {
-                      sh """
-                          ${PYTHON_VENV}/bin/python -c "
+  steps {
+      withEnv([
+          "SCRIPT_NAME=${params.SCRIPT_NAME}",
+          "ALERT_NAME=${params.ALERT_NAME}",
+          "ALERT_TYPE=${params.ALERT_TYPE}",
+          "ALERT_ID=${params.ALERT_ID}",
+          "EMAIL_BODY=${params.EMAIL_BODY}"
+      ]) {
+          script {
+              sh """
+                  ${PYTHON_VENV}/bin/python -c "
 from utils.email_generator import generate_email_and_excel_fields
-from utils.excel_manager import add_alert, close_alert
+from utils.excel_manager import add_alert, close_alert, SHARED_EXCEL_PATH
 import os
-
-# Usar Excel compartido
-from utils import excel_manager
-excel_manager.EXCEL_PATH = '${SHARED_EXCEL}'
 
 html, fields = generate_email_and_excel_fields(
   os.environ['SCRIPT_NAME'],
@@ -114,24 +110,25 @@ if os.environ['ALERT_TYPE'] == 'ACTIVA':
 elif os.environ['ALERT_TYPE'] == 'RESUELTA':
   close_alert(fields)
 "
-                      """
-                      archiveArtifacts artifacts: "${SHARED_EXCEL}", allowEmptyArchive: false
-                      emailext(
-                          subject: "Alerta ${params.ALERT_NAME} (${params.ALERT_TYPE})",
-                          body: readFile('email_body.html') + "<p><b>Excel de alertas:</b> <a href='${env.BUILD_URL}artifact/${SHARED_EXCEL}'>Ver archivo</a></p>",
-                          mimeType: 'text/html',
-                          to: "ecommerceoperaciones01@gmail.com"
-                      )
-                      emailext(
-                          subject: "📄 Informe interno - Alerta ${params.ALERT_NAME} (${params.ALERT_TYPE})",
-                          body: """<p>Se adjuntan logs y capturas de la ejecución.</p>
-                                   <p><b>Excel de alertas:</b> <a href='${env.BUILD_URL}artifact/${SHARED_EXCEL}'>Ver archivo</a></p>""",
-                          mimeType: 'text/html',
-                          to: "ecommerceoperaciones01@gmail.com",
-                          attachmentsPattern: "runs/${params.ALERT_ID}/logs/*.log, runs/${params.ALERT_ID}/screenshots/*.png"
-                      )
-                  }
-              }
+              """
+              // Copiar Excel compartido al workspace para archivarlo
+              sh "cp /var/lib/jenkins/shared/alertas.xlsx ${WORKSPACE}/alertas.xlsx"
+              archiveArtifacts artifacts: "alertas.xlsx", allowEmptyArchive: false
+
+              emailext(
+                  subject: "Alerta ${params.ALERT_NAME} (${params.ALERT_TYPE})",
+                  body: readFile('email_body.html') + "<p><b>Excel de alertas:</b> <a href='${env.BUILD_URL}artifact/alertas.xlsx'>Ver archivo</a></p>",
+                  mimeType: 'text/html',
+                  to: "ecommerceoperaciones01@gmail.com"
+              )
+              emailext(
+                  subject: "📄 Informe interno - Alerta ${params.ALERT_NAME} (${params.ALERT_TYPE})",
+                  body: """<p>Se adjuntan logs y capturas de la ejecución.</p>
+                           <p><b>Excel de alertas:</b> <a href='${env.BUILD_URL}artifact/alertas.xlsx'>Ver archivo</a></p>""",
+                  mimeType: 'text/html',
+                  to: "ecommerceoperaciones01@gmail.com",
+                  attachmentsPattern: "runs/${params.ALERT_ID}/logs/*.log, runs/${params.ALERT_ID}/screenshots/*.png"
+              )
           }
       }
   }
