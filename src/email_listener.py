@@ -1,16 +1,22 @@
-# =========================
-# email_listener.py (sin JSON)
-# =========================
 import os
 import time
 import re
 import requests
+import logging
 from dotenv import load_dotenv
 from imapclient import IMAPClient
 from email import message_from_bytes
 from email.header import decode_header, make_header
 from bs4 import BeautifulSoup
-from datetime import datetime
+
+# ============================
+# Configuración de logging
+# ============================
+logging.basicConfig(
+  level=logging.INFO,
+  format="%(asctime)s [%(levelname)s] %(message)s",
+  datefmt="%Y-%m-%d %H:%M:%S"
+)
 
 # ============================
 # Cargar variables de entorno
@@ -28,9 +34,7 @@ JENKINS_USER = os.getenv("JENKINS_USER")
 JENKINS_TOKEN = os.getenv("JENKINS_TOKEN")
 JOB_NAME = os.getenv("JOB_NAME", "GSIT_Alertas_Pruebas")
 
-# ============================
 # Alertas configuradas
-# ============================
 ALERTS = {
   "Alerta Acces Frontal": {
       "from": "rpinheiro@viewnext.com",
@@ -46,9 +50,6 @@ ALERTS = {
   }
 }
 
-# ============================
-# Funciones
-# ============================
 def decode_mime_words(s):
   try:
       return str(make_header(decode_header(s)))
@@ -84,6 +85,18 @@ def detect_alert(from_email, subject, body):
   subject_norm = normalize_text(subject)
   body_norm = normalize_text(body)
 
+  activa_pattern = re.compile(r"alerta\s*activa", re.IGNORECASE)
+  resuelta_pattern = re.compile(r"alerta\s*resuelta", re.IGNORECASE)
+
+  alert_type = None
+  if activa_pattern.search(subject_norm) or activa_pattern.search(body_norm):
+      alert_type = "ACTIVA"
+  elif resuelta_pattern.search(subject_norm) or resuelta_pattern.search(body_norm):
+      alert_type = "RESUELTA"
+
+  alert_id_match = re.search(r"ID\s*[:\-]\s*([A-Za-z0-9\-]+)", body)
+  alert_id = alert_id_match.group(1) if alert_id_match else ""
+
   for alert_name, data in ALERTS.items():
       match = True
       if "from" in data and normalize_text(data["from"]) not in from_norm:
@@ -93,37 +106,37 @@ def detect_alert(from_email, subject, body):
       if "body_contains" in data and normalize_text(data["body_contains"]) not in body_norm:
           match = False
       if match:
-          print(f"[INFO] ✅ Alerta detectada: {alert_name}")
-          return alert_name, data["script"]
-  return None, None
+          logging.info(f"✅ Alerta detectada: {alert_name} | Tipo: {alert_type} | ID: {alert_id}")
+          return alert_name, data["script"], alert_type, alert_id
 
-def trigger_jenkins_job(script_name, alert_name, from_email, subject, body):
-  """
-  Lanza job en Jenkins pasando todos los datos como parámetros.
-  """
+  return None, None, alert_type, alert_id
+
+def trigger_jenkins_job(script_name, alert_name, alert_type, alert_id, from_email, subject, body):
   url = f"{JENKINS_URL}/job/{JOB_NAME}/buildWithParameters"
   body_param = body if len(body) <= 8000 else body[:8000] + "\n...(truncated)..."
 
   params = {
       "SCRIPT_NAME": script_name,
       "ALERT_NAME": alert_name or "",
+      "ALERT_TYPE": alert_type or "",
+      "ALERT_ID": alert_id or "",
       "EMAIL_FROM": from_email or "",
       "EMAIL_SUBJECT": subject or "",
       "EMAIL_BODY": body_param
   }
 
-  print(f"[INFO] Lanzando Job Jenkins con params: {params}")
+  logging.info(f"Lanzando Job Jenkins con params: {params}")
 
   try:
       resp = requests.post(url, params=params, auth=(JENKINS_USER, JENKINS_TOKEN), timeout=30)
       if resp.status_code in (200, 201, 202):
-          print("[INFO] ✅ Jenkins job lanzado correctamente.")
+          logging.info("✅ Jenkins job lanzado correctamente.")
           return True
       else:
-          print(f"[ERROR] Jenkins respondió: {resp.status_code} - {resp.text}")
+          logging.error(f"Jenkins respondió: {resp.status_code} - {resp.text}")
           return False
   except Exception as e:
-      print(f"[ERROR] Fallo al llamar a Jenkins: {e}")
+      logging.error(f"Fallo al llamar a Jenkins: {e}")
       return False
 
 def check_email():
@@ -131,30 +144,27 @@ def check_email():
       server.login(EMAIL_USER, EMAIL_PASS)
       server.select_folder("INBOX")
       messages = server.search(["UNSEEN"])
-      print(f"[INFO] Correos no leídos: {len(messages)}")
+      logging.info(f"Correos no leídos: {len(messages)}")
 
       for msgid, data in server.fetch(messages, ['RFC822']).items():
           email_message = message_from_bytes(data[b'RFC822'])
           from_email = email_message.get('From', '').lower()
           subject_raw = email_message.get('Subject', '')
           subject = decode_mime_words(subject_raw)
-          print(f"[INFO] Revisando correo de {from_email} | Asunto: {subject}")
+          logging.info(f"Revisando correo de {from_email} | Asunto: {subject}")
           body = parse_email_body(email_message)
-          alert_name, script_to_run = detect_alert(from_email, subject, body)
+          alert_name, script_to_run, alert_type, alert_id = detect_alert(from_email, subject, body)
 
           if script_to_run:
-              trigger_jenkins_job(script_to_run, alert_name, from_email, subject, body)
+              trigger_jenkins_job(script_to_run, alert_name, alert_type, alert_id, from_email, subject, body)
           else:
-              print("[INFO] No coincide con ninguna alerta configurada.")
+              logging.info("No coincide con ninguna alerta configurada.")
 
-# ============================
-# Loop principal
-# ============================
 if __name__ == "__main__":
-  print("[INFO] Listener de correo iniciado…")
+  logging.info("Listener de correo iniciado…")
   while True:
       try:
           check_email()
       except Exception as e:
-          print(f"[ERROR] Error general del listener: {e}")
+          logging.error(f"Error general del listener: {e}")
       time.sleep(60)
