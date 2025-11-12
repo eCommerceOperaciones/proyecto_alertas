@@ -32,11 +32,13 @@ def main():
   from_email = args.from_email or os.getenv("EMAIL_FROM", "")
   subject = args.subject or os.getenv("EMAIL_SUBJECT", "")
   body = args.body or os.getenv("EMAIL_BODY", "")
+  alert_id = os.getenv("ALERT_ID", "no_id")
 
   logging.info(f"Script: {args.script}")
   logging.info(f"Perfil Selenium: {args.profile}")
   logging.info(f"Alerta: {alert_name}")
   logging.info(f"Retry actual: {args.retry} / Máx: {args.max_retries}")
+  logging.info(f"ALERT_ID: {alert_id}")
 
   try:
       script_relpath = load_script_path(args.script)
@@ -49,8 +51,12 @@ def main():
       logging.error(f"Script no encontrado en: {script_abspath}")
       sys.exit(2)  # Error técnico
 
-  os.makedirs(os.path.join(WORKSPACE, "runs", "logs"), exist_ok=True)
-  log_file = os.path.join(WORKSPACE, "runs", "logs", f"{args.script}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+  # Carpeta única por ALERT_ID
+  run_dir = os.path.join(WORKSPACE, "runs", alert_id)
+  os.makedirs(os.path.join(run_dir, "logs"), exist_ok=True)
+  os.makedirs(os.path.join(run_dir, "screenshots"), exist_ok=True)
+
+  log_file = os.path.join(run_dir, "logs", "execution.log")
 
   cmd = [sys.executable, script_abspath, args.profile, alert_name, from_email, subject, body]
 
@@ -80,14 +86,13 @@ def main():
       logging.error("status.txt no encontrado o vacío")
       sys.exit(2)  # Error técnico
 
-  # ✅ Ajuste: alarma_confirmada ahora devuelve exit code 0 para que Jenkins continúe
   if status == "falso_positivo":
-      sys.exit(0)  # Éxito, pero requiere posible reintento
+      sys.exit(0)
   elif status == "alarma_confirmada":
-      sys.exit(0)  # Éxito, continuar flujo alerta real
+      sys.exit(0)
   else:
       logging.error(f"Estado desconocido: {status}")
-      sys.exit(2)  # Error técnico
+      sys.exit(2)
 
 if __name__ == "__main__":
   main()
