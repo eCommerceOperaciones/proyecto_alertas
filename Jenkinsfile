@@ -33,7 +33,7 @@ stages {
     }
     stage('Checkout') {
         steps {
-            git branch: 'Dev_Sondas', url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git''
+            git branch: 'Dev_Sondas', url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git'
         }
     }
     stage('Preparar entorno') {
@@ -47,7 +47,7 @@ stages {
                 if [ ! -f "${WORKSPACE_BIN}/geckodriver" ]; then
                     echo "Instalando geckodriver..."
                     GECKO_VERSION="v0.36.0"
-                    wget -q "https://github.com/mozilla/geckodriver/releases/download/${GECKO_VERSION}/geckodriver-${GECKO_VERSION}-linux64.tar.gz""
+                    wget -q "https://github.com/mozilla/geckodriver/releases/download/${GECKO_VERSION}/geckodriver-${GECKO_VERSION}-linux64.tar.gz"
                     tar -xzf geckodriver-${GECKO_VERSION}-linux64.tar.gz
                     mv geckodriver ${WORKSPACE_BIN}/geckodriver
                     chmod +x ${WORKSPACE_BIN}/geckodriver
@@ -97,7 +97,7 @@ stages {
                             subject: "🔍 Informe interno - Alerta ${params.ALERT_NAME} revisada dos veces (Falso Positivo)",
                             body: """<p>La alerta fue revisada dos veces y se determinó como FALSO POSITIVO.</p>""",
                             mimeType: 'text/html',
-                            to: "eecommerceoperaciones01@gmail.com.com",
+                            to: "ecommerceoperaciones01@gmail.com",
                             attachmentsPattern: "runs/**/logs/*.log, runs/**/screenshots/*.png"
                         )
                     } else {
