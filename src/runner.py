@@ -42,12 +42,12 @@ def main():
       script_relpath = load_script_path(args.script)
   except Exception as e:
       logging.error(e)
-      sys.exit(2)
+      sys.exit(2)  # Error técnico
 
   script_abspath = os.path.join(WORKSPACE, script_relpath)
   if not os.path.exists(script_abspath):
       logging.error(f"Script no encontrado en: {script_abspath}")
-      sys.exit(2)
+      sys.exit(2)  # Error técnico
 
   os.makedirs(os.path.join(WORKSPACE, "runs", "logs"), exist_ok=True)
   log_file = os.path.join(WORKSPACE, "runs", "logs", f"{args.script}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
@@ -61,7 +61,7 @@ def main():
       logging.info(f"Proceso finalizado con código: {rc}")
   except Exception as e:
       logging.error(f"Fallo al ejecutar el script: {e}")
-      sys.exit(2)
+      sys.exit(2)  # Error técnico
 
   status_file = os.path.join(WORKSPACE, "status.txt")
   status = None
@@ -78,15 +78,16 @@ def main():
       logging.info(f"status.txt => {status}")
   else:
       logging.error("status.txt no encontrado o vacío")
-      sys.exit(2)
+      sys.exit(2)  # Error técnico
 
+  # ✅ Ajuste: alarma_confirmada ahora devuelve exit code 0 para que Jenkins continúe
   if status == "falso_positivo":
-      sys.exit(0)
+      sys.exit(0)  # Éxito, pero requiere posible reintento
   elif status == "alarma_confirmada":
-      sys.exit(1)
+      sys.exit(0)  # Éxito, continuar flujo alerta real
   else:
       logging.error(f"Estado desconocido: {status}")
-      sys.exit(2)
+      sys.exit(2)  # Error técnico
 
 if __name__ == "__main__":
   main()
