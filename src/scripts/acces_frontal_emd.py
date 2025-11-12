@@ -30,10 +30,14 @@ ACCES_FRONTAL_EMD_URL = os.getenv("ACCES_FRONTAL_EMD_URL")
 DEFAULT_WAIT = int(os.getenv("DEFAULT_WAIT", "15"))
 
 # =========================
+# Usar ALERT_ID de Jenkins o generar uno
+# =========================
+ALERT_ID = os.getenv("ALERT_ID", datetime.now().strftime("%Y%m%d_%H%M%S"))
+
+# =========================
 # Carpetas
 # =========================
-run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-run_dir = os.path.join(WORKSPACE, "runs", run_id)
+run_dir = os.path.join(WORKSPACE, "runs", ALERT_ID)
 screenshots_dir = os.path.join(run_dir, "screenshots")
 logs_dir = os.path.join(run_dir, "logs")
 os.makedirs(screenshots_dir, exist_ok=True)
@@ -66,7 +70,7 @@ def send_alert_email(screenshot_path: str, error_msg: str):
   body = f"""
   <h3>Alarma REAL detectada</h3>
   <p><strong>Error:</strong> {error_msg}</p>
-  <p><strong>Run:</strong> {run_id}</p>
+  <p><strong>Run:</strong> {ALERT_ID}</p>
   <p>Revise urgentemente.</p>
   """
   msg = MIMEMultipart()

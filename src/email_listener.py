@@ -1,6 +1,6 @@
 import os
-import time
 import re
+import uuid
 import requests
 import logging
 from dotenv import load_dotenv
@@ -81,6 +81,21 @@ def parse_email_body(email_message):
           body = payload.decode(errors="ignore")
   return body
 
+def extract_alert_id(body):
+  # Buscar patrón Recepció: dd/mm/yyyy HH:MM:SS
+  match = re.search(r"Recepci[oó]:\s*(\d{2}/\d{2}/\d{4}\s+\d{2}:\d{2}:\d{2})", body)
+  if match:
+      fecha_hora = match.group(1)
+      # Convertir a formato seguro: YYYYMMDD_HHMMSS
+      try:
+          from datetime import datetime
+          dt = datetime.strptime(fecha_hora, "%d/%m/%Y %H:%M:%S")
+          return dt.strftime("%Y%m%d_%H%M%S")
+      except ValueError:
+          pass  # Si falla el parseo, seguimos al UUID
+  # Si no se encuentra o falla el parseo, generar UUID
+  return str(uuid.uuid4())
+
 def detect_alert(from_email, subject, body):
   from_norm = normalize_text(from_email)
   subject_norm = normalize_text(subject)
@@ -95,8 +110,7 @@ def detect_alert(from_email, subject, body):
   elif resuelta_pattern.search(subject_norm) or resuelta_pattern.search(body_norm):
       alert_type = "RESUELTA"
 
-  alert_id_match = re.search(r"ID\s*[:\-]\s*([A-Za-z0-9\-]+)", body)
-  alert_id = alert_id_match.group(1) if alert_id_match else ""
+  alert_id = extract_alert_id(body)
 
   for alert_name, data in ALERTS.items():
       match = True
