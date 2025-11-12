@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import tempfile
 from datetime import datetime
 from dotenv import load_dotenv
 from selenium import webdriver
@@ -9,6 +10,7 @@ from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.firefox import GeckoDriverManager
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -26,9 +28,6 @@ EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 ACCES_FRONTAL_EMD_URL = os.getenv("ACCES_FRONTAL_EMD_URL")
 DEFAULT_WAIT = int(os.getenv("DEFAULT_WAIT", "15"))
-
-# Perfil Selenium
-FIREFOX_PROFILE_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(WORKSPACE, "profiles", "selenium_cert")
 
 # =========================
 # Carpetas
@@ -63,7 +62,6 @@ def send_alert_email(screenshot_path: str, error_msg: str):
   if not EMAIL_USER or not EMAIL_PASS:
       log("warn", "Email no configurado.")
       return
-
   subject = "ALERTA REAL: ACCES FRONTAL EMD"
   body = f"""
   <h3>Alarma REAL detectada</h3>
@@ -71,18 +69,15 @@ def send_alert_email(screenshot_path: str, error_msg: str):
   <p><strong>Run:</strong> {run_id}</p>
   <p>Revise urgentemente.</p>
   """
-
   msg = MIMEMultipart()
   msg['From'] = EMAIL_USER
   msg['To'] = EMAIL_USER
   msg['Subject'] = subject
   msg.attach(MIMEText(body, 'html'))
-
   with open(screenshot_path, 'rb') as f:
       img = MIMEImage(f.read())
       img.add_header('Content-Disposition', 'attachment', filename=os.path.basename(screenshot_path))
       msg.attach(img)
-
   try:
       server = smtplib.SMTP('smtp.gmail.com', 587)
       server.starttls()
@@ -94,30 +89,33 @@ def send_alert_email(screenshot_path: str, error_msg: str):
       log("error", f"Email falló: {e}")
 
 # =========================
-# Driver
+# Driver con webdriver-manager y perfil temporal
 # =========================
 def setup_driver() -> webdriver.Firefox:
-  if not os.path.exists(FIREFOX_PROFILE_PATH):
-      raise FileNotFoundError(f"Perfil no encontrado: {FIREFOX_PROFILE_PATH}")
-
   options = Options()
   options.add_argument("--headless")
   options.add_argument("--no-sandbox")
   options.add_argument("--disable-dev-shm-usage")
   options.add_argument("--disable-gpu")
   options.add_argument("--window-size=1920,1080")
-
-  profile = webdriver.FirefoxProfile(FIREFOX_PROFILE_PATH)
-  options.profile = profile
-
-  GECKODRIVER_PATH = os.path.join(WORKSPACE, "bin", "geckodriver")
-  service = Service(GECKODRIVER_PATH)
+  temp_profile_path = tempfile.mkdtemp()
+  options.profile = webdriver.FirefoxProfile(temp_profile_path)
+  service = Service(GeckoDriverManager().install())
   driver = webdriver.Firefox(service=service, options=options)
   driver.set_page_load_timeout(60)
   return driver
 
 # =========================
-# Funciones de interacción
+# Escritura de status.txt
+# =========================
+def write_status(status_value):
+  with open(os.path.join(logs_dir, "status.txt"), "w") as f:
+      f.write(status_value)
+  with open(os.path.join(WORKSPACE, "status.txt"), "w") as f:
+      f.write(status_value)
+
+# =========================
+# Funciones auxiliares Selenium
 # =========================
 def wait_for_loaders(driver, timeout=DEFAULT_WAIT):
   loaders_selectors = [
@@ -155,7 +153,6 @@ def click_with_wait(driver, by, selector, description, iframe=False, shadow=Fals
           WebDriverWait(driver, 30).until(
               EC.visibility_of_element_located((by, selector))
           )
-
       driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
       time.sleep(1)
       try:
@@ -165,28 +162,15 @@ def click_with_wait(driver, by, selector, description, iframe=False, shadow=Fals
           log("warn", f"Clic normal falló, usando JS para: {description}")
           driver.execute_script("arguments[0].click();", elem)
           log("info", f"✓ Clic con JS: {description}")
-
       if iframe:
           driver.switch_to.default_content()
       return True
-
   except Exception as e:
       log("error", f"✗ Fallo total: {description} | {e}")
       screenshot = save_screenshot(driver, f"error_{description.replace(' ', '_')}")
       write_status("alarma_confirmada")
       send_alert_email(screenshot, f"No se pudo interactuar: {description}")
       return False
-
-# =========================
-# Escritura de status.txt
-# =========================
-def write_status(status_value):
-  # En carpeta de logs
-  with open(os.path.join(logs_dir, "status.txt"), "w") as f:
-      f.write(status_value)
-  # En workspace para Jenkins
-  with open(os.path.join(WORKSPACE, "status.txt"), "w") as f:
-      f.write(status_value)
 
 # =========================
 # Flujo principal
@@ -200,15 +184,15 @@ def run_automation():
 
       if not click_with_wait(driver, None, None, "Botón 'Soc un ciutadà/ana'", shadow=True):
           driver.quit()
-          sys.exit(1)
+          return False
 
       if not click_with_wait(driver, By.ID, "apt_did", "Dades i documents"):
           driver.quit()
-          sys.exit(1)
+          return False
 
       if not click_with_wait(driver, By.XPATH, '//*[@id="center_1R"]/app-root/app-home/div/div[2]/div[2]/h3/a', "Els meus documents"):
           driver.quit()
-          sys.exit(1)
+          return False
 
       log("info", "Esperando documentos...")
       try:
@@ -237,9 +221,4 @@ def run_automation():
 
 if __name__ == "__main__":
   success = run_automation()
-  if success:
-      log("info", "=== JOB SUCCESS: falso_positivo ===")
-      sys.exit(0)
-  else:
-      log("error", "=== JOB FAILURE: alarma_confirmada ===")
-      sys.exit(0)  # Código 0 para que Jenkins decida si reintenta
+  sys.exit(0)  # Jenkins decide si reintenta o no

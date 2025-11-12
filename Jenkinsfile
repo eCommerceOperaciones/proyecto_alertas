@@ -45,19 +45,11 @@ pipeline {
 
       stage('Preparar entorno') {
           steps {
-              sh '''
-                  set -e
+              sh """
                   python3 -m venv ${PYTHON_VENV}
                   ${PYTHON_VENV}/bin/pip install --upgrade pip
                   ${PYTHON_VENV}/bin/pip install -r requirements.txt
-                  mkdir -p ${WORKSPACE_BIN}
-                  if ! command -v geckodriver &> /dev/null; then
-                      echo "Instalando geckodriver..."
-                      sudo apt-get update && sudo apt-get install -y firefox-geckodriver
-                  else
-                      echo "✅ geckodriver ya instalado."
-                  fi
-              '''
+              """
           }
       }
 
