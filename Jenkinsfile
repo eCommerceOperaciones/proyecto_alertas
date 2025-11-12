@@ -120,7 +120,7 @@ elif os.environ['ALERT_TYPE'] == 'RESUELTA':
                           subject: "Alerta ${params.ALERT_NAME} (${params.ALERT_TYPE})",
                           body: readFile('email_body.html') + "<p><b>Excel de alertas:</b> <a href='${env.BUILD_URL}artifact/${SHARED_EXCEL}'>Ver archivo</a></p>",
                           mimeType: 'text/html',
-                          to: "correo_interno@dominio.com"
+                          to: "ecommerceoperaciones01@gmail.com"
                       )
                       emailext(
                           subject: "📄 Informe interno - Alerta ${params.ALERT_NAME} (${params.ALERT_TYPE})",
