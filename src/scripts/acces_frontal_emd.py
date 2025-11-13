@@ -2,7 +2,6 @@ import os
 import sys
 import time
 import tempfile
-from datetime import datetime
 from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
@@ -50,6 +49,10 @@ if missing_vars:
       f.write("error_tecnico")
   sys.exit(2)
 
+# Guardar ALERT_ID real para Jenkins
+with open(os.path.join(WORKSPACE, "current_alert_id.txt"), "w") as f:
+  f.write(ALERT_ID)
+
 # =========================
 # Carpetas
 # =========================
@@ -69,8 +72,11 @@ def log(level: str, message: str) -> None:
 
 def save_screenshot(driver, name: str) -> str:
   filename = os.path.join(screenshots_dir, f"{name}.png")
-  log("info", f"Guardando captura en {filename}")
   driver.save_screenshot(filename)
+  if os.path.exists(filename):
+      log("info", f"Captura guardada correctamente en: {filename}")
+  else:
+      log("error", f"No se pudo guardar la captura en: {filename}")
   return filename
 
 # =========================
@@ -241,7 +247,4 @@ def run_automation():
 
 if __name__ == "__main__":
   success = run_automation()
-  if success:
-      sys.exit(0)
-  else:
-      sys.exit(1)  # Jenkins marcará fallo y podrás ver la captura
+  sys.exit(0 if success else 1)
