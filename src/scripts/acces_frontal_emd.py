@@ -118,10 +118,25 @@ def send_alert_email(screenshot_path: str, error_msg: str):
 # Driver
 # =========================
 def setup_driver() -> webdriver.Firefox:
-  FIREFOX_PROFILE_PATH = os.path.join(WORKSPACE, "profiles", "selenium_cert")
-  if not os.path.exists(FIREFOX_PROFILE_PATH):
-      log("error", f"Perfil Selenium no encontrado en: {FIREFOX_PROFILE_PATH}")
+  profile_path = os.path.join(WORKSPACE, "profiles", "selenium_cert")
+  log("info", f"Usando perfil de Firefox: {profile_path}")
+
+  if not os.path.exists(profile_path):
+      log("error", f"Perfil Selenium no encontrado en: {profile_path}")
       sys.exit(2)
+
+  # Listar contenido del perfil
+  log("info", "Contenido del perfil:")
+  for root, dirs, files in os.walk(profile_path):
+      for file in files:
+          log("info", f" - {os.path.relpath(os.path.join(root, file), profile_path)}")
+
+  # Comprobar archivo de certificados
+  cert_file = os.path.join(profile_path, "cert9.db")
+  if os.path.exists(cert_file):
+      log("info", f"cert9.db encontrado ({os.path.getsize(cert_file)} bytes)")
+  else:
+      log("warn", "cert9.db NO encontrado en el perfil, puede que no tenga certificado")
 
   options = Options()
   options.add_argument("--headless")
@@ -130,10 +145,10 @@ def setup_driver() -> webdriver.Firefox:
   options.add_argument("--disable-gpu")
   options.add_argument("--window-size=1920,1080")
 
-  profile = webdriver.FirefoxProfile(FIREFOX_PROFILE_PATH)
-  options.profile = profile
+  # Asignar perfil
+  options.profile = webdriver.FirefoxProfile(profile_path)
 
-  service = Service("/usr/bin/geckodriver")  # geckodriver instalado en el sistema
+  service = Service(GeckoDriverManager().install())
   driver = webdriver.Firefox(service=service, options=options)
   driver.set_page_load_timeout(60)
   return driver
