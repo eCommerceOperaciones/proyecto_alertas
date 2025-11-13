@@ -38,7 +38,7 @@ pipeline {
 
        stage('Checkout') {
            steps {
-               git branch: 'Dev_Sondas', url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git'
+               git branch: 'Dev_Sondas', url: 'bloqueado'
            }
        }
 
@@ -63,11 +63,18 @@ pipeline {
                    "EMAIL_BODY=${params.EMAIL_BODY}"
                ]) {
                    sh """
+                       set +e
                        ${PYTHON_VENV}/bin/python src/runner.py \
                            --script ${params.SCRIPT_NAME} \
                            --profile "$WORKSPACE/profiles/selenium_cert" \
                            --retry ${params.RETRY_COUNT} \
                            --max-retries ${params.MAX_RETRIES}
+                       rc=$?
+                       if [ $rc -ne 0 ]; then
+                           echo "Error interno detectado, creando internal_error.flag"
+                           touch internal_error.flag
+                       fi
+                       set -e
                    """
                }
            }
@@ -77,11 +84,13 @@ pipeline {
            steps {
                script {
                    def realAlertId = readFile('current_alert_id.txt').trim()
+                   def status = fileExists('status.txt') ? readFile('status.txt').trim() : "desconocido"
 
-                   // Bloque Python con manejo de errores para Excel
-                   sh """
-                       set +e
-                       ${PYTHON_VENV}/bin/python -c "
+                   if (!fileExists('internal_error.flag')) {
+                       // Flujo normal
+                       sh """
+                           set +e
+                           ${PYTHON_VENV}/bin/python -c "
 from utils.email_generator import generate_email_and_excel_fields
 from utils.excel_manager import add_alert, close_alert
 import os, traceback
@@ -103,53 +112,61 @@ except Exception as e:
    print('[WARN] No se pudo actualizar el Excel compartido:', e)
    traceback.print_exc()
 "
-                       set -e
-                   """
+                           set -e
+                       """
 
-                   // Archivar solo capturas y logs de la ejecución actual
-                   archiveArtifacts artifacts: "alertas.xlsx, runs/${realAlertId}/logs/*.log, runs/${realAlertId}/screenshots/*.png", allowEmptyArchive: true
+                       archiveArtifacts artifacts: "alertas.xlsx, runs/${realAlertId}/logs/*.log, runs/${realAlertId}/screenshots/*.png", allowEmptyArchive: true
 
-                   // Correo principal (sin enlace al Excel)
-                   emailext(
-                       subject: "Alerta ${params.ALERT_NAME} (${params.ALERT_TYPE})",
-                       body: readFile('email_body.html'),
-                       mimeType: 'text/html',
-                       to: "ecommerceoperaciones01@gmail.com"
-                   )
+                       emailext(
+                           subject: "Alerta ${params.ALERT_NAME} (${params.ALERT_TYPE})",
+                           body: readFile('email_body.html'),
+                           mimeType: 'text/html',
+                           to: "ecommerceoperaciones01@gmail.com"
+                       )
 
-                   // Correo interno con enlace y adjuntos
-                   emailext(
-                       subject: "📄 Informe interno - Alerta ${params.ALERT_NAME} (${params.ALERT_TYPE})",
-                       body: """<p>Se adjuntan logs y capturas de la ejecución.</p>
-                                <p><b>Excel de alertas:</b> <a href='${env.BUILD_URL}artifact/alertas.xlsx'>Ver archivo</a></p>""",
-                       mimeType: 'text/html',
-                       to: "ecommerceoperaciones01@gmail.com",
-                       attachmentsPattern: "runs/${realAlertId}/logs/*.log, runs/${realAlertId}/screenshots/*.png, alertas.xlsx"
-                   )
+                       emailext(
+                           subject: "📄 Informe interno - Alerta ${params.ALERT_NAME} (${params.ALERT_TYPE})",
+                           body: """<p>Se adjuntan logs y capturas de la ejecución.</p>
+                                    <p><b>Excel de alertas:</b> <a href='${env.BUILD_URL}artifact/alertas.xlsx'>Ver archivo</a></p>""",
+                           mimeType: 'text/html',
+                           to: "ecommerceoperaciones01@gmail.com",
+                           attachmentsPattern: "runs/${realAlertId}/logs/*.log, runs/${realAlertId}/screenshots/*.png, alertas.xlsx"
+                       )
+                   } else {
+                       // Solo correo interno de error
+                       archiveArtifacts artifacts: "runs/${realAlertId}/logs/*.log, runs/${realAlertId}/screenshots/*.png", allowEmptyArchive: true
+                       emailext(
+                           subject: "❌ Error interno en alerta ${params.ALERT_NAME} (${params.ALERT_TYPE})",
+                           body: """<p>Se ha producido un error interno durante la ejecución del script.</p>
+                                    <p>Revisar logs y capturas adjuntas para depuración.</p>""",
+                           mimeType: 'text/html',
+                           to: "ecommerceoperaciones01@gmail.com",
+                           attachmentsPattern: "runs/${realAlertId}/logs/*.log, runs/${realAlertId}/screenshots/*.png"
+                       )
+                   }
                }
            }
        }
+
        stage('Notificar en Slack') {
            steps {
                script {
                    def realAlertId = readFile('current_alert_id.txt').trim()
-                   def status = readFile('status.txt').trim()
-                   sh """
-                       ${PYTHON_VENV}/bin/python -c "
-        from utils.slack_notifier import send_slack_alert
-        import os
-        send_slack_alert(
-           alert_id='${realAlertId}',
-           alert_name='${params.ALERT_NAME}',
-           alert_type='${params.ALERT_TYPE}',
-           status='${status}',
-           jenkins_url='${env.BUILD_URL}'
-        )
-        "
-                   """
+                   def status = fileExists('status.txt') ? readFile('status.txt').trim() : "desconocido"
+                   writeFile file: 'slack_notify.py', text: """
+from utils.slack_notifier import send_slack_alert
+send_slack_alert(
+   alert_id='${realAlertId}',
+   alert_name='${params.ALERT_NAME}',
+   alert_type='${params.ALERT_TYPE}',
+   status='${status}',
+   jenkins_url='${env.BUILD_URL}'
+)
+"""
+                   sh "${PYTHON_VENV}/bin/python slack_notify.py"
                }
            }
-        }
+       }
 
        stage('Reintento si falso positivo') {
            when {
