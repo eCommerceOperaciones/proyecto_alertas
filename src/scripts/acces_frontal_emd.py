@@ -1,7 +1,7 @@
 import os
 import sys
 import time
-import tempfile
+import shutil
 from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
@@ -14,7 +14,6 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
-import shutil
 
 # =========================
 # Cargar .env
@@ -125,29 +124,17 @@ def setup_driver() -> webdriver.Firefox:
   options.add_argument("--disable-gpu")
   options.add_argument("--window-size=1920,1080")
 
-  # Ruta original del perfil en el workspace
+  # Ruta original del perfil en el workspace (descargado por Git)
   original_profile_path = os.path.join(WORKSPACE, "profiles", "selenium_cert")
   if not os.path.exists(original_profile_path):
       log("error", f"Perfil Selenium no encontrado en: {original_profile_path}")
       sys.exit(2)
 
-  # Copiar perfil a /home/jenkins para evitar restricciones
-  home_dir = os.path.expanduser("~")
-  profile_copy_path = os.path.join(home_dir, f"selenium_cert_{ALERT_ID}")
+  # Copiar perfil al workspace en carpeta única para esta ejecución
+  profile_copy_path = os.path.join(WORKSPACE, f"selenium_cert_{ALERT_ID}")
   if os.path.exists(profile_copy_path):
       shutil.rmtree(profile_copy_path)
-
-  # Ignorar archivos temporales que no existen o no son necesarios
-  def ignore_files(dir, files):
-      ignore_list = ['lock', 'parent.lock', '.parentlock']
-      return [f for f in files if f in ignore_list]
-
-  shutil.copytree(
-      original_profile_path,
-      profile_copy_path,
-      ignore=ignore_files,
-      dirs_exist_ok=False
-  )
+  shutil.copytree(original_profile_path, profile_copy_path)
 
   log("info", f"Usando perfil de Firefox desde: {profile_copy_path}")
   options.profile = webdriver.FirefoxProfile(profile_copy_path)
