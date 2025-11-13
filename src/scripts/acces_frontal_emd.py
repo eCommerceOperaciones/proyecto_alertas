@@ -13,6 +13,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
+from webdriver_manager.firefox import GeckoDriverManager  # <-- FALTA ESTE IMPORT
 
 # =========================
 # Cargar .env
@@ -125,18 +126,16 @@ def setup_driver() -> webdriver.Firefox:
       log("error", f"Perfil Selenium no encontrado en: {profile_path}")
       sys.exit(2)
 
-  # Listar contenido del perfil
   log("info", "Contenido del perfil:")
   for root, dirs, files in os.walk(profile_path):
       for file in files:
           log("info", f" - {os.path.relpath(os.path.join(root, file), profile_path)}")
 
-  # Comprobar archivo de certificados
   cert_file = os.path.join(profile_path, "cert9.db")
   if os.path.exists(cert_file):
       log("info", f"cert9.db encontrado ({os.path.getsize(cert_file)} bytes)")
   else:
-      log("warn", "cert9.db NO encontrado en el perfil, puede que no tenga certificado")
+      log("warn", "cert9.db NO encontrado en el perfil")
 
   options = Options()
   options.add_argument("--headless")
@@ -144,8 +143,6 @@ def setup_driver() -> webdriver.Firefox:
   options.add_argument("--disable-dev-shm-usage")
   options.add_argument("--disable-gpu")
   options.add_argument("--window-size=1920,1080")
-
-  # Asignar perfil
   options.profile = webdriver.FirefoxProfile(profile_path)
 
   service = Service(GeckoDriverManager().install())
