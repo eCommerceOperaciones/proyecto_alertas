@@ -71,7 +71,7 @@ pipeline {
        // =========================
        stage('Checkout') {
            steps {
-               git branch: 'Dev_Sondas', url: 'bloqueado'
+               git branch: 'Dev_Sondas', url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git'
            }
        }
 
