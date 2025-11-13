@@ -76,8 +76,10 @@ stages {
     stage('Generar correo y actualizar Excel') {
         steps {
             script {
+                // Leer ALERT_ID real generado por el script
                 def realAlertId = readFile('current_alert_id.txt').trim()
 
+                // Ejecutar bloque Python con indentación correcta
                 sh """
                     ${PYTHON_VENV}/bin/python -c "
 from utils.email_generator import generate_email_and_excel_fields
@@ -85,24 +87,26 @@ from utils.excel_manager import add_alert, close_alert
 import os
 
 html, fields = generate_email_and_excel_fields(
-os.environ['SCRIPT_NAME'],
-os.environ['EMAIL_BODY'],
-os.environ['ALERT_TYPE'],
-os.environ.get('ALERT_ID', None)
+  os.environ['SCRIPT_NAME'],
+  os.environ['EMAIL_BODY'],
+  os.environ['ALERT_TYPE'],
+  os.environ.get('ALERT_ID', None)
 )
 
 with open('email_body.html', 'w', encoding='utf-8') as f:
-f.write(html)
+  f.write(html)
 
 if os.environ['ALERT_TYPE'] == 'ACTIVA':
-add_alert(fields)
+  add_alert(fields)
 elif os.environ['ALERT_TYPE'] == 'RESUELTA':
-close_alert(fields)
+  close_alert(fields)
 "
                 """
 
+                // Archivar solo capturas y logs de la ejecución actual
                 archiveArtifacts artifacts: "alertas.xlsx, runs/${realAlertId}/logs/*.log, runs/${realAlertId}/screenshots/*.png", allowEmptyArchive: true
 
+                // Correo principal
                 emailext(
                     subject: "Alerta ${params.ALERT_NAME} (${params.ALERT_TYPE})",
                     body: readFile('email_body.html') + "<p><b>Excel de alertas:</b> <a href='${env.BUILD_URL}artifact/alertas.xlsx'>Ver archivo</a></p>",
@@ -110,6 +114,7 @@ close_alert(fields)
                     to: "ecommerceoperaciones01@gmail.com"
                 )
 
+                // Correo interno con adjuntos
                 emailext(
                     subject: "📄 Informe interno - Alerta ${params.ALERT_NAME} (${params.ALERT_TYPE})",
                     body: """<p>Se adjuntan logs y capturas de la ejecución.</p>
