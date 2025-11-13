@@ -1,7 +1,7 @@
 import os
 import sys
 import time
-import shutil
+from datetime import datetime
 from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
@@ -9,7 +9,6 @@ from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.firefox import GeckoDriverManager
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -69,12 +68,14 @@ def log(level: str, message: str) -> None:
   timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
   line = f"[{timestamp}] [{level.upper()}] {message}"
   print(line)
+  with open(os.path.join(logs_dir, "execution.log"), "a", encoding="utf-8") as f:
+      f.write(line + "\n")
 
 def save_screenshot(driver, name: str) -> str:
   filename = os.path.join(screenshots_dir, f"{name}.png")
   driver.save_screenshot(filename)
   if os.path.exists(filename):
-      log("info", f"Captura guardada correctamente en: {filename}")
+      log("info", f"Captura guardada en: {filename}")
   else:
       log("error", f"No se pudo guardar la captura en: {filename}")
   return filename
@@ -117,6 +118,11 @@ def send_alert_email(screenshot_path: str, error_msg: str):
 # Driver
 # =========================
 def setup_driver() -> webdriver.Firefox:
+  FIREFOX_PROFILE_PATH = os.path.join(WORKSPACE, "profiles", "selenium_cert")
+  if not os.path.exists(FIREFOX_PROFILE_PATH):
+      log("error", f"Perfil Selenium no encontrado en: {FIREFOX_PROFILE_PATH}")
+      sys.exit(2)
+
   options = Options()
   options.add_argument("--headless")
   options.add_argument("--no-sandbox")
@@ -124,36 +130,13 @@ def setup_driver() -> webdriver.Firefox:
   options.add_argument("--disable-gpu")
   options.add_argument("--window-size=1920,1080")
 
-  # Ruta original del perfil en el workspace (descargado por Git)
-  original_profile_path = os.path.join(WORKSPACE, "profiles", "selenium_cert")
-  if not os.path.exists(original_profile_path):
-      log("error", f"Perfil Selenium no encontrado en: {original_profile_path}")
-      sys.exit(2)
+  profile = webdriver.FirefoxProfile(FIREFOX_PROFILE_PATH)
+  options.profile = profile
 
-  # Copiar perfil a /home/jenkins para evitar restricciones
-  home_dir = os.path.expanduser("~")  # Esto será /home/jenkins
-  profile_copy_path = os.path.join(home_dir, f"selenium_cert_{ALERT_ID}")
-  if os.path.exists(profile_copy_path):
-      shutil.rmtree(profile_copy_path)
-  shutil.copytree(original_profile_path, profile_copy_path)
-
-  log("info", f"Usando perfil de Firefox desde: {profile_copy_path}")
-  options.profile = webdriver.FirefoxProfile(profile_copy_path)
-
-  service = Service(GeckoDriverManager().install())
+  service = Service("/usr/bin/geckodriver")  # geckodriver instalado en el sistema
   driver = webdriver.Firefox(service=service, options=options)
   driver.set_page_load_timeout(60)
   return driver
-
-# =========================
-# Escritura de status.txt
-# =========================
-def write_status(status_value):
-  log("info", f"Escribiendo status: {status_value}")
-  with open(os.path.join(logs_dir, "status.txt"), "w") as f:
-      f.write(status_value)
-  with open(os.path.join(WORKSPACE, "status.txt"), "w") as f:
-      f.write(status_value)
 
 # =========================
 # Selenium helpers
@@ -212,6 +195,16 @@ def click_with_wait(driver, by, selector, description, iframe=False, shadow=Fals
       write_status("alarma_confirmada")
       send_alert_email(screenshot, f"No se pudo interactuar: {description}")
       return False
+
+# =========================
+# Escritura de status.txt
+# =========================
+def write_status(status_value):
+  log("info", f"Escribiendo status: {status_value}")
+  with open(os.path.join(logs_dir, "status.txt"), "w") as f:
+      f.write(status_value)
+  with open(os.path.join(WORKSPACE, "status.txt"), "w") as f:
+      f.write(status_value)
 
 # =========================
 # Flujo principal
