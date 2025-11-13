@@ -1,3 +1,18 @@
+"""
+Script de automatización Selenium para validar el acceso frontal EMD.
+
+Este script:
+1. Carga configuración desde .env y variables de entorno.
+2. Abre un navegador Firefox con perfil preconfigurado.
+3. Realiza pasos de autenticación y navegación en la web objetivo.
+4. Detecta si la alerta es un falso positivo o una alerta real.
+5. Guarda capturas, logs y estado de la ejecución.
+6. Envía correo de alerta en caso de incidencia real.
+
+Autor: Rodrigo Simoes
+Proyecto: GSIT_Alertas
+"""
+
 import os
 import sys
 import time
@@ -16,7 +31,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
 
 # =========================
-# Cargar .env
+# Cargar configuración
 # =========================
 ENV_PATH = os.path.join(os.getcwd(), ".env")
 if os.path.exists(ENV_PATH):
@@ -27,12 +42,11 @@ EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 ACCES_FRONTAL_EMD_URL = os.getenv("ACCES_FRONTAL_EMD_URL")
 DEFAULT_WAIT = int(os.getenv("DEFAULT_WAIT", "15"))
-
 ALERT_ID = os.getenv("ALERT_ID", datetime.now().strftime("%Y%m%d_%H%M%S"))
 ALERT_NAME = os.getenv("ALERT_NAME", "Acces Frontal EMD")
 
 # =========================
-# Carpetas
+# Carpetas de ejecución
 # =========================
 run_dir = os.path.join(WORKSPACE, "runs", ALERT_ID)
 screenshots_dir = os.path.join(run_dir, "screenshots")
@@ -44,6 +58,12 @@ os.makedirs(logs_dir, exist_ok=True)
 # Logging
 # =========================
 def log(level: str, message: str) -> None:
+   """
+   Registra un mensaje en consola y en el archivo de log.
+
+   :param level: Nivel del log (info, warn, error).
+   :param message: Mensaje a registrar.
+   """
    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
    line = f"[{timestamp}] [{level.upper()}] {message}"
    print(line)
@@ -51,6 +71,13 @@ def log(level: str, message: str) -> None:
        f.write(line + "\n")
 
 def save_screenshot(driver, name: str) -> str:
+   """
+   Guarda una captura de pantalla en la carpeta de screenshots.
+
+   :param driver: Instancia de WebDriver.
+   :param name: Nombre del archivo sin extensión.
+   :return: Ruta completa de la captura guardada.
+   """
    filename = os.path.join(screenshots_dir, f"{name}.png")
    driver.save_screenshot(filename)
    log("info", f"Captura guardada en: {filename}")
@@ -60,9 +87,16 @@ def save_screenshot(driver, name: str) -> str:
 # Email
 # =========================
 def send_alert_email(screenshot_path: str, error_msg: str):
+   """
+   Envía un correo de alerta con la captura y el mensaje de error.
+
+   :param screenshot_path: Ruta de la captura de pantalla.
+   :param error_msg: Mensaje de error a incluir en el correo.
+   """
    if not EMAIL_USER or not EMAIL_PASS:
        log("warn", "Email no configurado.")
        return
+
    subject = f"ALERTA REAL: {ALERT_NAME}"
    body = f"""
    <h3>Alarma REAL detectada</h3>
@@ -70,15 +104,18 @@ def send_alert_email(screenshot_path: str, error_msg: str):
    <p><strong>Run:</strong> {ALERT_ID}</p>
    <p>Revise urgentemente.</p>
    """
+
    msg = MIMEMultipart()
    msg['From'] = EMAIL_USER
    msg['To'] = EMAIL_USER
    msg['Subject'] = subject
    msg.attach(MIMEText(body, 'html'))
+
    with open(screenshot_path, 'rb') as f:
        img = MIMEImage(f.read())
        img.add_header('Content-Disposition', 'attachment', filename=os.path.basename(screenshot_path))
        msg.attach(img)
+
    try:
        server = smtplib.SMTP('smtp.gmail.com', 587)
        server.starttls()
@@ -90,13 +127,19 @@ def send_alert_email(screenshot_path: str, error_msg: str):
        log("error", f"Email falló: {e}")
 
 # =========================
-# Driver
+# Driver Selenium
 # =========================
 def setup_driver() -> webdriver.Firefox:
+   """
+   Configura y devuelve una instancia de Firefox WebDriver con perfil predefinido.
+
+   :return: Instancia de Firefox WebDriver.
+   """
    profile_path = os.path.join(WORKSPACE, "profiles", "selenium_cert")
    if not os.path.exists(profile_path):
        log("error", f"Perfil Selenium no encontrado en: {profile_path}")
        sys.exit(2)
+
    options = Options()
    options.add_argument("--headless")
    options.add_argument("--no-sandbox")
@@ -104,15 +147,22 @@ def setup_driver() -> webdriver.Firefox:
    options.add_argument("--disable-gpu")
    options.add_argument("--window-size=1920,1080")
    options.profile = webdriver.FirefoxProfile(profile_path)
+
    service = Service(GeckoDriverManager().install())
    driver = webdriver.Firefox(service=service, options=options)
    driver.set_page_load_timeout(60)
    return driver
 
 # =========================
-# Espera loaders
+# Espera de loaders
 # =========================
 def wait_for_loaders(driver, timeout=DEFAULT_WAIT):
+   """
+   Espera a que desaparezcan elementos de carga (spinners, overlays, etc.).
+
+   :param driver: Instancia de WebDriver.
+   :param timeout: Tiempo máximo de espera por cada selector.
+   """
    loaders_selectors = [
        ".spinner", ".loading", ".loader", "[class*='spinner']", "[class*='loading']",
        "app-root[loading]", "div[id*='loader']", ".overlay", ".blocker",
@@ -131,6 +181,17 @@ def wait_for_loaders(driver, timeout=DEFAULT_WAIT):
 # Clic con espera
 # =========================
 def click_with_wait(driver, by, selector, description, iframe=False, shadow=False):
+   """
+   Espera a que un elemento esté presente/visible y realiza clic.
+
+   :param driver: Instancia de WebDriver.
+   :param by: Estrategia de localización (By.ID, By.XPATH, etc.).
+   :param selector: Selector del elemento.
+   :param description: Descripción para logs.
+   :param iframe: Si True, busca dentro de un iframe.
+   :param shadow: Si True, busca dentro de un shadow DOM.
+   :return: True si el clic fue exitoso, False en caso contrario.
+   """
    try:
        wait_for_loaders(driver, timeout=20)
        if shadow:
@@ -152,6 +213,7 @@ def click_with_wait(driver, by, selector, description, iframe=False, shadow=Fals
            WebDriverWait(driver, 30).until(
                EC.visibility_of_element_located((by, selector))
            )
+
        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
        time.sleep(1)
        try:
@@ -161,6 +223,7 @@ def click_with_wait(driver, by, selector, description, iframe=False, shadow=Fals
            log("warn", f"Clic normal falló, usando JS para: {description}")
            driver.execute_script("arguments[0].click();", elem)
            log("info", f"✓ Clic con JS: {description}")
+
        if iframe:
            driver.switch_to.default_content()
        return True
@@ -175,6 +238,12 @@ def click_with_wait(driver, by, selector, description, iframe=False, shadow=Fals
 # Certificado digital
 # =========================
 def click_btn_cert(driver) -> bool:
+   """
+   Intenta hacer clic en el botón de certificado digital, buscando en DOM principal e iframes.
+
+   :param driver: Instancia de WebDriver.
+   :return: True si se clicó correctamente, False en caso contrario.
+   """
    try:
        wait_for_loaders(driver)
        try:
@@ -188,6 +257,7 @@ def click_btn_cert(driver) -> bool:
            return True
        except:
            log("warn", "Buscando certificado en iframes...")
+
        for iframe in driver.find_elements(By.TAG_NAME, "iframe"):
            driver.switch_to.frame(iframe)
            try:
@@ -210,6 +280,11 @@ def click_btn_cert(driver) -> bool:
 # Escritura de status.txt
 # =========================
 def write_status(status_value):
+   """
+   Escribe el estado de la ejecución en logs y en la raíz del workspace.
+
+   :param status_value: Valor del estado (falso_positivo, alarma_confirmada, etc.).
+   """
    log("info", f"Escribiendo status: {status_value}")
    with open(os.path.join(logs_dir, "status.txt"), "w") as f:
        f.write(status_value)
@@ -220,6 +295,13 @@ def write_status(status_value):
 # Flujo principal
 # =========================
 def run_automation():
+   """
+   Ejecuta el flujo completo de validación:
+   1. Abre la URL objetivo.
+   2. Interactúa con elementos clave (shadow DOM, certificado, botones).
+   3. Verifica la carga de documentos.
+   4. Determina si es falso positivo o alerta real.
+   """
    driver = setup_driver()
    try:
        log("info", f"URL: {ACCES_FRONTAL_EMD_URL}")
