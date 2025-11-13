@@ -14,6 +14,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
+import shutil
 
 # =========================
 # Cargar .env
@@ -124,13 +125,21 @@ def setup_driver() -> webdriver.Firefox:
   options.add_argument("--disable-gpu")
   options.add_argument("--window-size=1920,1080")
 
-  # Usar perfil específico descargado desde Git
-  profile_path = os.path.join(WORKSPACE, "profiles", "selenium_cert")
-  if not os.path.exists(profile_path):
-      log("error", f"Perfil Selenium no encontrado en: {profile_path}")
+  # Ruta original del perfil en el workspace
+  original_profile_path = os.path.join(WORKSPACE, "profiles", "selenium_cert")
+  if not os.path.exists(original_profile_path):
+      log("error", f"Perfil Selenium no encontrado en: {original_profile_path}")
       sys.exit(2)
-  log("info", f"Usando perfil de Firefox: {profile_path}")
-  options.profile = webdriver.FirefoxProfile(profile_path)
+
+  # Copiar perfil a /home/jenkins para evitar restricciones
+  home_dir = os.path.expanduser("~")
+  profile_copy_path = os.path.join(home_dir, f"selenium_cert_{ALERT_ID}")
+  if os.path.exists(profile_copy_path):
+      shutil.rmtree(profile_copy_path)
+  shutil.copytree(original_profile_path, profile_copy_path)
+
+  log("info", f"Usando perfil de Firefox desde: {profile_copy_path}")
+  options.profile = webdriver.FirefoxProfile(profile_copy_path)
 
   service = Service(GeckoDriverManager().install())
   driver = webdriver.Firefox(service=service, options=options)
