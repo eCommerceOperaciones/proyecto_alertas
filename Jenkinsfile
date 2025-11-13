@@ -129,6 +129,27 @@ except Exception as e:
                }
            }
        }
+       stage('Notificar en Slack') {
+           steps {
+               script {
+                   def realAlertId = readFile('current_alert_id.txt').trim()
+                   def status = readFile('status.txt').trim()
+                   sh """
+                       ${PYTHON_VENV}/bin/python -c "
+        from utils.slack_notifier import send_slack_alert
+        import os
+        send_slack_alert(
+           alert_id='${realAlertId}',
+           alert_name='${params.ALERT_NAME}',
+           alert_type='${params.ALERT_TYPE}',
+           status='${status}',
+           jenkins_url='${env.BUILD_URL}'
+        )
+        "
+                   """
+               }
+           }
+        }
 
        stage('Reintento si falso positivo') {
            when {
