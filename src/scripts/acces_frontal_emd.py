@@ -124,14 +124,15 @@ def setup_driver() -> webdriver.Firefox:
   options.add_argument("--disable-gpu")
   options.add_argument("--window-size=1920,1080")
 
-  # Ruta original del perfil en el workspace (descargado por Git)
+  # Ruta original del perfil en el workspace
   original_profile_path = os.path.join(WORKSPACE, "profiles", "selenium_cert")
   if not os.path.exists(original_profile_path):
       log("error", f"Perfil Selenium no encontrado en: {original_profile_path}")
       sys.exit(2)
 
-  # Copiar perfil al workspace en carpeta única para esta ejecución
-  profile_copy_path = os.path.join(WORKSPACE, f"selenium_cert_{ALERT_ID}")
+  # Copiar perfil a /home/jenkins
+  home_dir = os.path.expanduser("~")  # Esto será /home/jenkins
+  profile_copy_path = os.path.join(home_dir, f"selenium_cert_{ALERT_ID}")
   if os.path.exists(profile_copy_path):
       shutil.rmtree(profile_copy_path)
   shutil.copytree(original_profile_path, profile_copy_path)
