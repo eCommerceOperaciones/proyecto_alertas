@@ -1,6 +1,5 @@
 import os
 import re
-import uuid
 import requests
 import logging
 from dotenv import load_dotenv
@@ -8,6 +7,7 @@ from imapclient import IMAPClient
 from email import message_from_bytes
 from email.header import decode_header, make_header
 from bs4 import BeautifulSoup
+from datetime import datetime
 
 # ============================
 # Configuración de logging
@@ -86,15 +86,14 @@ def extract_alert_id(body):
   match = re.search(r"Recepci[oó]:\s*(\d{2}/\d{2}/\d{4}\s+\d{2}:\d{2}:\d{2})", body)
   if match:
       fecha_hora = match.group(1)
-      # Convertir a formato seguro: YYYYMMDD_HHMMSS
       try:
-          from datetime import datetime
           dt = datetime.strptime(fecha_hora, "%d/%m/%Y %H:%M:%S")
           return dt.strftime("%Y%m%d_%H%M%S")
       except ValueError:
-          pass  # Si falla el parseo, seguimos al UUID
-  # Si no se encuentra o falla el parseo, generar UUID
-  return str(uuid.uuid4())
+          logging.error(f"Formato de fecha/hora inválido en Recepció: {fecha_hora}")
+          return None
+  logging.error("No se encontró campo 'Recepció:' en el correo")
+  return None
 
 def detect_alert(from_email, subject, body):
   from_norm = normalize_text(from_email)
@@ -111,6 +110,8 @@ def detect_alert(from_email, subject, body):
       alert_type = "RESUELTA"
 
   alert_id = extract_alert_id(body)
+  if not alert_id:
+      return None, None, alert_type, None  # Error técnico si no hay ID
 
   for alert_name, data in ALERTS.items():
       match = True
@@ -127,6 +128,10 @@ def detect_alert(from_email, subject, body):
   return None, None, alert_type, alert_id
 
 def trigger_jenkins_job(script_name, alert_name, alert_type, alert_id, from_email, subject, body):
+  if not alert_id:
+      logging.error("❌ ALERT_ID no encontrado, no se puede lanzar el job en Jenkins")
+      return False
+
   url = f"{JENKINS_URL}/job/{JOB_NAME}/buildWithParameters"
   body_param = body if len(body) <= 8000 else body[:8000] + "\n...(truncated)..."
 
@@ -134,7 +139,7 @@ def trigger_jenkins_job(script_name, alert_name, alert_type, alert_id, from_emai
       "SCRIPT_NAME": script_name,
       "ALERT_NAME": alert_name or "",
       "ALERT_TYPE": alert_type or "",
-      "ALERT_ID": alert_id or "",
+      "ALERT_ID": alert_id,
       "EMAIL_FROM": from_email or "",
       "EMAIL_SUBJECT": subject or "",
       "EMAIL_BODY": body_param
@@ -174,10 +179,10 @@ def check_email():
               # Marcar como leído
               server.add_flags(msgid, ['\\Seen'])
 
-              if script_to_run:
+              if script_to_run and alert_id:
                   trigger_jenkins_job(script_to_run, alert_name, alert_type, alert_id, from_email, subject, body)
               else:
-                  logging.info("No coincide con ninguna alerta configurada.")
+                  logging.error("❌ No coincide con ninguna alerta configurada o falta ALERT_ID.")
   except Exception as e:
       logging.error(f"Error en check_email: {e}")
 

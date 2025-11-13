@@ -30,9 +30,26 @@ ACCES_FRONTAL_EMD_URL = os.getenv("ACCES_FRONTAL_EMD_URL")
 DEFAULT_WAIT = int(os.getenv("DEFAULT_WAIT", "15"))
 
 # =========================
-# Usar ALERT_ID de Jenkins o generar uno
+# Variables críticas desde Jenkins
 # =========================
-ALERT_ID = os.getenv("ALERT_ID", datetime.now().strftime("%Y%m%d_%H%M%S"))
+ALERT_ID = os.getenv("ALERT_ID")
+ALERT_NAME = os.getenv("ALERT_NAME")
+ALERT_TYPE = os.getenv("ALERT_TYPE")
+
+# Validación estricta
+missing_vars = []
+if not ALERT_ID:
+  missing_vars.append("ALERT_ID")
+if not ALERT_NAME:
+  missing_vars.append("ALERT_NAME")
+if not ALERT_TYPE:
+  missing_vars.append("ALERT_TYPE")
+
+if missing_vars:
+  print(f"[ERROR] Faltan variables críticas: {', '.join(missing_vars)}")
+  with open(os.path.join(WORKSPACE, "status.txt"), "w") as f:
+      f.write("error_tecnico")
+  sys.exit(2)  # Error técnico → Jenkins marca fallo
 
 # =========================
 # Carpetas
@@ -50,8 +67,6 @@ def log(level: str, message: str) -> None:
   timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
   line = f"[{timestamp}] [{level.upper()}] {message}"
   print(line)
-  with open(os.path.join(logs_dir, "execution.log"), "a", encoding="utf-8") as f:
-      f.write(line + "\n")
 
 def save_screenshot(driver, name: str) -> str:
   filename = os.path.join(screenshots_dir, f"{name}.png")
@@ -66,12 +81,13 @@ def send_alert_email(screenshot_path: str, error_msg: str):
   if not EMAIL_USER or not EMAIL_PASS:
       log("warn", "Email no configurado.")
       return
-  subject = "ALERTA REAL: ACCES FRONTAL EMD"
+  subject = f"ALERTA REAL: {ALERT_NAME}"
   body = f"""
   <h3>Alarma REAL detectada</h3>
   <p><strong>Error:</strong> {error_msg}</p>
   <p><strong>Run:</strong> {ALERT_ID}</p>
   <p>Revise urgentemente.</p>
+  <p><a href="{os.getenv('BUILD_URL', '#')}">Ver log de Jenkins</a></p>
   """
   msg = MIMEMultipart()
   msg['From'] = EMAIL_USER
