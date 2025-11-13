@@ -136,7 +136,18 @@ def setup_driver() -> webdriver.Firefox:
   profile_copy_path = os.path.join(home_dir, f"selenium_cert_{ALERT_ID}")
   if os.path.exists(profile_copy_path):
       shutil.rmtree(profile_copy_path)
-  shutil.copytree(original_profile_path, profile_copy_path)
+
+  # Ignorar archivos temporales que no existen o no son necesarios
+  def ignore_files(dir, files):
+      ignore_list = ['lock', 'parent.lock', '.parentlock']
+      return [f for f in files if f in ignore_list]
+
+  shutil.copytree(
+      original_profile_path,
+      profile_copy_path,
+      ignore=ignore_files,
+      dirs_exist_ok=False
+  )
 
   log("info", f"Usando perfil de Firefox desde: {profile_copy_path}")
   options.profile = webdriver.FirefoxProfile(profile_copy_path)
