@@ -1,9 +1,11 @@
 import os
 import pandas as pd
 from datetime import datetime
+from filelock import FileLock, Timeout
 
 # Ruta compartida para todos los Jobs
 SHARED_EXCEL_PATH = "/var/lib/jenkins/shared/alertas.xlsx"
+LOCK_PATH = SHARED_EXCEL_PATH + ".lock"
 
 def ensure_shared_excel_dir():
    """Crea el directorio compartido si no existe y da permisos."""
@@ -32,28 +34,38 @@ def create_excel_if_not_exists():
        print(f"[INFO] Usando Excel existente en {SHARED_EXCEL_PATH}")
 
 def add_alert(fields):
-   """Añade una nueva alerta al Excel compartido evitando duplicados."""
+   """Añade una nueva alerta al Excel compartido evitando duplicados y con bloqueo."""
    create_excel_if_not_exists()
-   df = pd.read_excel(SHARED_EXCEL_PATH)
+   lock = FileLock(LOCK_PATH, timeout=30)  # Espera hasta 30s si otro proceso está escribiendo
+   try:
+       with lock:
+           df = pd.read_excel(SHARED_EXCEL_PATH)
 
-   alert_id = str(fields.get("ID")).strip()
-   if alert_id in df["ID"].astype(str).str.strip().values:
-       print(f"[INFO] ALERT_ID {alert_id} ya existe en Excel, no se añade duplicado.")
-       return
+           alert_id = str(fields.get("ID")).strip()
+           if alert_id in df["ID"].astype(str).str.strip().values:
+               print(f"[INFO] ALERT_ID {alert_id} ya existe en Excel, no se añade duplicado.")
+               return
 
-   df = pd.concat([df, pd.DataFrame([fields])], ignore_index=True)
-   df.to_excel(SHARED_EXCEL_PATH, index=False)
-   print(f"[INFO] Alerta añadida con ID {alert_id}")
+           df = pd.concat([df, pd.DataFrame([fields])], ignore_index=True)
+           df.to_excel(SHARED_EXCEL_PATH, index=False)
+           print(f"[INFO] Alerta añadida con ID {alert_id}")
+   except Timeout:
+       print("[ERROR] No se pudo obtener el bloqueo para escribir en el Excel (timeout).")
 
 def close_alert(fields):
-   """Cierra una alerta existente actualizando la columna Fi."""
+   """Cierra una alerta existente actualizando la columna Fi con bloqueo."""
    create_excel_if_not_exists()
-   df = pd.read_excel(SHARED_EXCEL_PATH)
-   alert_id = str(fields.get("ID")).strip()
-   match = df[df["ID"].astype(str).str.strip() == alert_id]
-   if not match.empty:
-       df.loc[df["ID"].astype(str).str.strip() == alert_id, "Fi"] = fields.get("Fi") or datetime.now().strftime("%d/%m/%Y %H:%M")
-       df.to_excel(SHARED_EXCEL_PATH, index=False)
-       print(f"[INFO] Alerta {alert_id} cerrada correctamente.")
-   else:
-       print(f"[ERROR] No se encontró alerta con ID {alert_id}")
+   lock = FileLock(LOCK_PATH, timeout=30)
+   try:
+       with lock:
+           df = pd.read_excel(SHARED_EXCEL_PATH)
+           alert_id = str(fields.get("ID")).strip()
+           match = df[df["ID"].astype(str).str.strip() == alert_id]
+           if not match.empty:
+               df.loc[df["ID"].astype(str).str.strip() == alert_id, "Fi"] = fields.get("Fi") or datetime.now().strftime("%d/%m/%Y %H:%M")
+               df.to_excel(SHARED_EXCEL_PATH, index=False)
+               print(f"[INFO] Alerta {alert_id} cerrada correctamente.")
+           else:
+               print(f"[ERROR] No se encontró alerta con ID {alert_id}")
+   except Timeout:
+       print("[ERROR] No se pudo obtener el bloqueo para escribir en el Excel (timeout).")
