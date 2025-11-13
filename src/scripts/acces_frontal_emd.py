@@ -36,7 +36,6 @@ ALERT_ID = os.getenv("ALERT_ID")
 ALERT_NAME = os.getenv("ALERT_NAME")
 ALERT_TYPE = os.getenv("ALERT_TYPE")
 
-# Validación estricta
 missing_vars = []
 if not ALERT_ID:
   missing_vars.append("ALERT_ID")
@@ -49,7 +48,7 @@ if missing_vars:
   print(f"[ERROR] Faltan variables críticas: {', '.join(missing_vars)}")
   with open(os.path.join(WORKSPACE, "status.txt"), "w") as f:
       f.write("error_tecnico")
-  sys.exit(2)  # Error técnico → Jenkins marca fallo
+  sys.exit(2)
 
 # =========================
 # Carpetas
@@ -70,8 +69,8 @@ def log(level: str, message: str) -> None:
 
 def save_screenshot(driver, name: str) -> str:
   filename = os.path.join(screenshots_dir, f"{name}.png")
+  log("info", f"Guardando captura en {filename}")
   driver.save_screenshot(filename)
-  log("info", f"Captura: {filename}")
   return filename
 
 # =========================
@@ -109,7 +108,7 @@ def send_alert_email(screenshot_path: str, error_msg: str):
       log("error", f"Email falló: {e}")
 
 # =========================
-# Driver con webdriver-manager y perfil temporal
+# Driver
 # =========================
 def setup_driver() -> webdriver.Firefox:
   options = Options()
@@ -129,13 +128,14 @@ def setup_driver() -> webdriver.Firefox:
 # Escritura de status.txt
 # =========================
 def write_status(status_value):
+  log("info", f"Escribiendo status: {status_value}")
   with open(os.path.join(logs_dir, "status.txt"), "w") as f:
       f.write(status_value)
   with open(os.path.join(WORKSPACE, "status.txt"), "w") as f:
       f.write(status_value)
 
 # =========================
-# Funciones auxiliares Selenium
+# Selenium helpers
 # =========================
 def wait_for_loaders(driver, timeout=DEFAULT_WAIT):
   loaders_selectors = [
@@ -241,4 +241,7 @@ def run_automation():
 
 if __name__ == "__main__":
   success = run_automation()
-  sys.exit(0)  # Jenkins decide si reintenta o no
+  if success:
+      sys.exit(0)
+  else:
+      sys.exit(1)  # Jenkins marcará fallo y podrás ver la captura
