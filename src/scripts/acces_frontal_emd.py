@@ -123,8 +123,15 @@ def setup_driver() -> webdriver.Firefox:
   options.add_argument("--disable-dev-shm-usage")
   options.add_argument("--disable-gpu")
   options.add_argument("--window-size=1920,1080")
-  temp_profile_path = tempfile.mkdtemp()
-  options.profile = webdriver.FirefoxProfile(temp_profile_path)
+
+  # Usar perfil específico descargado desde Git
+  profile_path = os.path.join(WORKSPACE, "profiles", "selenium_cert")
+  if not os.path.exists(profile_path):
+      log("error", f"Perfil Selenium no encontrado en: {profile_path}")
+      sys.exit(2)
+  log("info", f"Usando perfil de Firefox: {profile_path}")
+  options.profile = webdriver.FirefoxProfile(profile_path)
+
   service = Service(GeckoDriverManager().install())
   driver = webdriver.Firefox(service=service, options=options)
   driver.set_page_load_timeout(60)
