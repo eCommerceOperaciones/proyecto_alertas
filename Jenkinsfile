@@ -157,7 +157,7 @@ except Exception as e:
                        subject: "Alerta ${params.ALERT_NAME} (${params.ALERT_TYPE})",
                        body: readFile('email_body.html'),
                        mimeType: 'text/html',
-                       to: "sergio.perezm@viewnext.com"
+                       to: "ecommerceoperaciones01@gmail.com"
                    )
 
                    // Correo interno con adjuntos
@@ -166,7 +166,7 @@ except Exception as e:
                        body: """<p>Se adjuntan logs y capturas de la ejecución.</p>
                                 <p><b>Excel de alertas:</b> <a href='${env.BUILD_URL}artifact/alertas.xlsx'>Ver archivo</a></p>""",
                        mimeType: 'text/html',
-                       to: "sergio.perezm@viewnext.com",
+                       to: "ecommerceoperaciones01@gmail.com",
                        attachmentsPattern: "runs/${realAlertId}/logs/*.log, runs/${realAlertId}/screenshots/*.png, alertas.xlsx"
                    )
                }
