@@ -336,9 +336,21 @@ def run_automation():
            WebDriverWait(driver, DEFAULT_WAIT * 2).until(
                EC.visibility_of_element_located((By.XPATH, '//*[@id="center_1R"]/app-root/app-emd/emd-home/emd-documents/div/emd-cards-view/ul/li[1]/div'))
            )
+           
+           
+           # 2. Esperar a que el spinner de carga DESAPAREZCA
+           # Ajusta el selector según el HTML real (ver más abajo)
+           WebDriverWait(driver, 10).until(
+                EC.invisibility_of_element_located(
+                    (By.XPATH, "//*[contains(@class, 'spinner') or contains(@class, 'loading') or contains(@class, 'overlay')]")
+                )
+            )
+           # Opcional: pequeño sleep para estabilidad visual (solo si es necesario)
+           # import time; time.sleep(0.5)
            log("info", "FLUJOS OK - Falso positivo")
            save_screenshot(driver, "final_ok")
            write_status("falso_positivo")
+           
            return True
        except:
            log("error", "ALERTA REAL: No cargaron documentos")
