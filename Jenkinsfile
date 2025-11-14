@@ -1,29 +1,26 @@
-/*
-Jenkinsfile para el proyecto GSIT_Alertas
-Autor: Rodrigo Simoes
-
-Este pipeline:
-1. Valida parámetros y credenciales.
-2. Hace checkout del código.
-3. Prepara el entorno Python.
-4. Ejecuta el script Selenium correspondiente.
-5. Genera correos y actualiza el Excel compartido.
-6. Notifica en Slack.
-7. Reintenta ejecución si se detecta falso positivo.
-
-Variables clave:
-- SCRIPT_NAME: Nombre lógico del script a ejecutar.
-- ALERT_ID: Identificador único de la alerta.
-- ALERT_TYPE: ACTIVA o RESUELTA.
-- MAX_RETRIES: Número máximo de reintentos.
-*/
-
 pipeline {
    agent { label 'main' }
 
-   // =========================
-   // Parámetros configurables
-   // =========================
+   /*
+   Jenkinsfile para el proyecto GSIT_Alertas
+   Autor: Rodrigo Simoes
+
+   Este pipeline:
+   1. Valida parámetros y credenciales.
+   2. Hace checkout del código.
+   3. Prepara el entorno Python.
+   4. Ejecuta el script Selenium correspondiente.
+   5. Genera correos y actualiza el Excel compartido.
+   6. Notifica en Slack.
+   7. Reintenta ejecución si se detecta falso positivo.
+
+   Variables clave:
+   - SCRIPT_NAME: Nombre lógico del script a ejecutar.
+   - ALERT_ID: Identificador único de la alerta.
+   - ALERT_TYPE: ACTIVA o RESUELTA.
+   - MAX_RETRIES: Número máximo de reintentos.
+   */
+
    parameters {
        string(name: 'SCRIPT_NAME', defaultValue: '', description: 'Nombre lógico del script registrado en dispatcher')
        string(name: 'RETRY_COUNT', defaultValue: '0', description: 'Contador de reintentos automáticos')
@@ -36,9 +33,6 @@ pipeline {
        string(name: 'MAX_RETRIES', defaultValue: '1', description: 'Número máximo de reintentos permitidos')
    }
 
-   // =========================
-   // Variables de entorno globales
-   // =========================
    environment {
        WORKSPACE_BIN = "${WORKSPACE}/bin"
        PYTHON_VENV = "${WORKSPACE}/venv"
@@ -47,9 +41,6 @@ pipeline {
 
    stages {
 
-       // =========================
-       // Validación inicial
-       // =========================
        stage('Validar parámetros y credenciales') {
            steps {
                script {
@@ -59,25 +50,20 @@ pipeline {
                }
                withCredentials([
                    usernamePassword(credentialsId: 'email-alertas-user', usernameVariable: 'EMAIL_CREDS_USR', passwordVariable: 'EMAIL_CREDS_PSW'),
-                   usernamePassword(credentialsId: 'jenkins-api', usernameVariable: 'JENKINS_CREDS_USR', passwordVariable: 'JENKINS_CREDS_PSW')
+                   usernamePassword(credentialsId: 'jenkins-api', usernameVariable: 'JENKINS_CREDS_USR', passwordVariable: 'JENKINS_CREDS_PSW'),
+                   string(credentialsId: 'slack-token', variable: 'SLACK_TOKEN') // <- solo agregamos el token de Slack
                ]) {
                    echo "✅ Credenciales cargadas correctamente."
                }
            }
        }
 
-       // =========================
-       // Checkout del código
-       // =========================
        stage('Checkout') {
            steps {
                git branch: 'Dev_AREA_PRIVADA', url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git'
            }
        }
 
-       // =========================
-       // Preparar entorno Python
-       // =========================
        stage('Preparar entorno') {
            steps {
                sh """
@@ -88,9 +74,6 @@ pipeline {
            }
        }
 
-       // =========================
-       // Ejecutar script Selenium
-       // =========================
        stage('Ejecutar script de alerta') {
            steps {
                withEnv([
@@ -112,16 +95,12 @@ pipeline {
            }
        }
 
-       // =========================
-       // Generar correos y actualizar Excel
-       // =========================
        stage('Generar correo y actualizar Excel') {
            steps {
                script {
                    def realAlertId = readFile('current_alert_id.txt').trim()
                    def status = fileExists('status.txt') ? readFile('status.txt').trim() : "desconocido"
 
-                   // Ejecuta script Python para generar HTML y actualizar Excel
                    sh """
                        set +e
                        '${PYTHON_VENV}/bin/python' -c "
@@ -149,18 +128,14 @@ except Exception as e:
                        set -e
                    """
 
-                   // Archivar artefactos relevantes
                    archiveArtifacts artifacts: "alertas.xlsx, runs/${realAlertId}/logs/*.log, runs/${realAlertId}/screenshots/*.png", allowEmptyArchive: true
 
-                   // Correo principal
                    emailext(
                        subject: "Alerta ${params.ALERT_NAME} (${params.ALERT_TYPE})",
                        body: readFile('email_body.html'),
                        mimeType: 'text/html',
                        to: "ecommerceoperaciones01@gmail.com"
                    )
-
-                   // Correo interno con adjuntos
                    emailext(
                        subject: "📄 Informe interno - Alerta ${params.ALERT_NAME} (${params.ALERT_TYPE})",
                        body: """<p>Se adjuntan logs y capturas de la ejecución.</p>
@@ -173,24 +148,24 @@ except Exception as e:
            }
        }
 
-       // =========================
-       // Notificación en Slack
-       // =========================
        stage('Notificar en Slack') {
            steps {
                script {
                    def realAlertId = readFile('current_alert_id.txt').trim()
                    def status = fileExists('status.txt') ? readFile('status.txt').trim() : "desconocido"
 
-                   // Crear script temporal para enviar mensaje a Slack
                    writeFile file: 'slack_notify.py', text: """
 from utils.slack_notifier import send_slack_alert
+import os
+
+SLACK_TOKEN = os.environ.get('SLACK_TOKEN')
 send_slack_alert(
    alert_id='${realAlertId}',
    alert_name='${params.ALERT_NAME}',
    alert_type='${params.ALERT_TYPE}',
    status='${status}',
-   jenkins_url='${env.BUILD_URL}'
+   jenkins_url='${env.BUILD_URL}',
+   slack_token=SLACK_TOKEN
 )
 """
                    sh "'${PYTHON_VENV}/bin/python' slack_notify.py"
@@ -198,9 +173,6 @@ send_slack_alert(
            }
        }
 
-       // =========================
-       // Reintento si falso positivo
-       // =========================
        stage('Reintento si falso positivo') {
            when {
                expression {
