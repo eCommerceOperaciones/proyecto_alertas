@@ -130,28 +130,27 @@ def send_alert_email(screenshot_path: str, error_msg: str):
 # Driver Selenium
 # =========================
 def setup_driver() -> webdriver.Firefox:
-   """
-   Configura y devuelve una instancia de Firefox WebDriver con perfil predefinido.
+  """
+  Configura y devuelve una instancia de Firefox WebDriver con perfil predefinido.
+  """
+  profile_path = os.path.join(WORKSPACE, "profiles", "selenium_cert")
+  if not os.path.exists(profile_path):
+      log("error", f"Perfil Selenium no encontrado en: {profile_path}")
+      sys.exit(2)
 
-   :return: Instancia de Firefox WebDriver.
-   """
-   profile_path = os.path.join(WORKSPACE, "profiles", "selenium_cert")
-   if not os.path.exists(profile_path):
-       log("error", f"Perfil Selenium no encontrado en: {profile_path}")
-       sys.exit(2)
+  options = Options()
+  options.add_argument("--headless")
+  options.add_argument("--no-sandbox")
+  options.add_argument("--disable-dev-shm-usage")
+  options.add_argument("--disable-gpu")
+  options.add_argument("--window-size=1920,1080")
+  options.profile = webdriver.FirefoxProfile(profile_path)
 
-   options = Options()
-   options.add_argument("--headless")
-   options.add_argument("--no-sandbox")
-   options.add_argument("--disable-dev-shm-usage")
-   options.add_argument("--disable-gpu")
-   options.add_argument("--window-size=1920,1080")
-   options.profile = webdriver.FirefoxProfile(profile_path)
-
-   service = Service(GeckoDriverManager().install())
-   driver = webdriver.Firefox(service=service, options=options)
-   driver.set_page_load_timeout(60)
-   return driver
+  # Usar el driver instalado manualmente
+  service = Service("/usr/local/bin/geckodriver")
+  driver = webdriver.Firefox(service=service, options=options)
+  driver.set_page_load_timeout(60)
+  return driver
 
 # =========================
 # Espera de loaders

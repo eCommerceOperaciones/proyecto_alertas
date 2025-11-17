@@ -75,6 +75,23 @@ pipeline {
            }
        }
 
+       stage('Instalar GeckoDriver si no existe') {
+          steps {
+              sh """
+                  if ! command -v geckodriver >/dev/null 2>&1; then
+                      echo "⚙ Instalando GeckoDriver..."
+                      wget -q https://github.com/mozilla/geckodriver/releases/download/v0.34.0/geckodriver-v0.34.0-linux64.tar.gz
+                      tar -xzf geckodriver-v0.34.0-linux64.tar.gz
+                      sudo mv geckodriver /usr/local/bin/
+                      sudo chmod +x /usr/local/bin/geckodriver
+                      echo "✅ GeckoDriver instalado en /usr/local/bin"
+                  else
+                      echo "✅ GeckoDriver ya está instalado"
+                  fi
+              """
+          }
+      }
+
        // =========================
        // Preparar entorno Python
        // =========================
