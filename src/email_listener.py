@@ -48,6 +48,12 @@ ALERTS = {
       "subject_contains": "FRAMEWORKS EFORMULARIS",
       "body_contains": "01_CARREGA_URL_WEFOSJX26",
       "script": "01_carrega_url_wsdl"
+  },
+  "Area Privada": {
+      "from": "rpinheiro@viewnext.com",
+      "subject_contains": "AREA PRIVADA",
+      "body_contains": "CARPETA_CIUTADANA-CONF",
+      "script": "area_privada.py"
   }
 }
 
