@@ -53,7 +53,7 @@ ALERTS = {
       "from": "rpinheiro@viewnext.com",
       "subject_contains": "AREA PRIVADA",
       "body_contains": "CARPETA_CIUTADANA-CONF",
-      "script": "area_privada.py"
+      "script": "area_privada"
   }
 }
 

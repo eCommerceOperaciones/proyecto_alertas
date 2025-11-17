@@ -92,7 +92,7 @@ def run_automation():
       log("info", "Esperando botón principal en Área Privada...")
       try:
           elem = WebDriverWait(driver, DEFAULT_WAIT).until(
-              EC.element_to_be_clickable((By.XPATH, "/main/app-acces/div/div[1]/button"))
+              EC.element_to_be_clickable((By.XPATH, "/main/app-acces/div/div[1]/div[1]/a"))
           )
           log("info", "Botón encontrado y clicable → FALSO POSITIVO")
           save_screenshot(driver, "falso_positivo_area_privada")
