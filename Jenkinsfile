@@ -75,7 +75,21 @@ pipeline {
            }
        }
 
-       stage('Instalar GeckoDriver si no existe') {
+       // =========================
+       // Preparar entorno Python
+       // =========================
+       stage('Preparar entorno') {
+           steps {
+               sh """
+                   python3 -m venv '${PYTHON_VENV}'
+                   '${PYTHON_VENV}/bin/pip' install --upgrade pip
+                   '${PYTHON_VENV}/bin/pip' install -r requirements.txt
+               """
+           }
+       }
+
+         // =========================
+         stage('Instalar GeckoDriver si no existe') {
           steps {
               sh """
                   if ! command -v geckodriver >/dev/null 2>&1; then
@@ -91,19 +105,19 @@ pipeline {
               """
           }
       }
-
-       // =========================
-       // Preparar entorno Python
-       // =========================
-       stage('Preparar entorno') {
-           steps {
-               sh """
-                   python3 -m venv '${PYTHON_VENV}'
-                   '${PYTHON_VENV}/bin/pip' install --upgrade pip
-                   '${PYTHON_VENV}/bin/pip' install -r requirements.txt
-               """
+       
+       stage('Verificar entorno Firefox/GeckoDriver') {
+          steps {
+              sh """
+                  echo '📌 Verificando GeckoDriver y Firefox'
+                  which geckodriver || { echo '❌ GeckoDriver no encontrado'; exit 1; }
+                  geckodriver --version
+                  which firefox || { echo '❌ Firefox no encontrado'; exit 1; }
+                  firefox --version
+              """
            }
-       }
+        }
+
 
        // =========================
        // Ejecutar script Selenium

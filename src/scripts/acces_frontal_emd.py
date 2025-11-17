@@ -130,9 +130,6 @@ def send_alert_email(screenshot_path: str, error_msg: str):
 # Driver Selenium
 # =========================
 def setup_driver() -> webdriver.Firefox:
-  """
-  Configura y devuelve una instancia de Firefox WebDriver con perfil predefinido.
-  """
   profile_path = os.path.join(WORKSPACE, "profiles", "selenium_cert")
   if not os.path.exists(profile_path):
       log("error", f"Perfil Selenium no encontrado en: {profile_path}")
@@ -146,7 +143,7 @@ def setup_driver() -> webdriver.Firefox:
   options.add_argument("--window-size=1920,1080")
   options.profile = webdriver.FirefoxProfile(profile_path)
 
-  # Usar el driver instalado manualmente
+  # Ruta fija del driver instalado en el sistema
   service = Service("/usr/local/bin/geckodriver")
   driver = webdriver.Firefox(service=service, options=options)
   driver.set_page_load_timeout(60)
