@@ -80,6 +80,68 @@ def setup_driver() -> webdriver.Firefox:
   return driver
 
 # =========================
+# Espera de loaders
+# =========================
+def wait_for_loaders(driver, timeout=DEFAULT_WAIT):
+  loaders_selectors = [
+      ".spinner", ".loading", ".loader", "[class*='spinner']", "[class*='loading']",
+      "app-root[loading]", "div[id*='loader']", ".overlay", ".blocker",
+      "body > div[style*='block']", "div[role='dialog']", ".modal-backdrop"
+  ]
+  for selector in loaders_selectors:
+      try:
+          WebDriverWait(driver, 2).until(
+              EC.invisibility_of_element_located((By.CSS_SELECTOR, selector))
+          )
+      except:
+          continue
+  log("info", "Loaders/Overlays desaparecidos.")
+
+# =========================
+# Clic con soporte Shadow DOM
+# =========================
+def click_with_wait(driver, by, selector, description, iframe=False, shadow=False, shadow_script=None):
+  try:
+      wait_for_loaders(driver, timeout=20)
+      if shadow and shadow_script:
+          WebDriverWait(driver, DEFAULT_WAIT).until(lambda d: d.execute_script(shadow_script))
+          elem = driver.execute_script(shadow_script)
+      elif iframe:
+          iframe_elem = WebDriverWait(driver, DEFAULT_WAIT).until(
+              EC.presence_of_element_located((By.TAG_NAME, "iframe"))
+          )
+          driver.switch_to.frame(iframe_elem)
+          elem = WebDriverWait(driver, 30).until(
+              EC.presence_of_element_located((by, selector))
+          )
+      else:
+          elem = WebDriverWait(driver, 30).until(
+              EC.presence_of_element_located((by, selector))
+          )
+          WebDriverWait(driver, 30).until(
+              EC.visibility_of_element_located((by, selector))
+          )
+
+      driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
+      time.sleep(1)
+      try:
+          elem.click()
+          log("info", f"✓ Clic normal: {description}")
+      except:
+          log("warn", f"Clic normal falló, usando JS para: {description}")
+          driver.execute_script("arguments[0].click();", elem)
+          log("info", f"✓ Clic con JS: {description}")
+
+      if iframe:
+          driver.switch_to.default_content()
+      return True
+  except Exception as e:
+      log("error", f"✗ Fallo total: {description} | {e}")
+      save_screenshot(driver, f"error_{description.replace(' ', '_')}")
+      write_status("alarma_confirmada")
+      return False
+
+# =========================
 # Flujo principal
 # =========================
 def run_automation():
@@ -89,17 +151,18 @@ def run_automation():
       driver.get(AREA_PRIVADA_URL)
       WebDriverWait(driver, 30).until(lambda d: d.execute_script("return document.readyState") == "complete")
 
-      log("info", "Esperando botón principal en Área Privada...")
-      try:
-          elem = WebDriverWait(driver, DEFAULT_WAIT).until(
-              EC.element_to_be_clickable((By.XPATH, "/main/app-acces/div/div[1]/div[1]/a"))
-          )
-          log("info", "Botón encontrado y clicable → FALSO POSITIVO")
+      shadow_script = '''
+          return document
+              .querySelector("#single-spa-application\\\\:mfe-main-app > app-root")
+              .shadowRoot
+              .querySelector("main > app-acces > div > div.left > a");
+      '''
+
+      if click_with_wait(driver, None, None, "Botón principal Area Privada", shadow=True, shadow_script=shadow_script):
           save_screenshot(driver, "falso_positivo_area_privada")
           write_status("falso_positivo")
           return True
-      except Exception as e:
-          log("error", f"No se encontró el botón esperado: {e}")
+      else:
           save_screenshot(driver, "error_area_privada")
           write_status("alarma_confirmada")
           return False
