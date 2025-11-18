@@ -186,6 +186,7 @@ def check_email():
               server.add_flags(msgid, ['\\Seen'])
 
               if script_to_run and alert_id:
+                  logging.info(f"📤 Enviando a Jenkins: {alert_name} | Tipo: {alert_type} | ID: {alert_id}")
                   trigger_jenkins_job(script_to_run, alert_name, alert_type, alert_id, from_email, subject, body)
               else:
                   logging.error("❌ No coincide con ninguna alerta configurada o falta ALERT_ID.")
