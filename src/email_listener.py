@@ -57,6 +57,10 @@ ALERTS = {
   }
 }
 
+# ============================
+# Funciones auxiliares
+# ============================
+
 def decode_mime_words(s):
   try:
       return str(make_header(decode_header(s)))
@@ -64,8 +68,14 @@ def decode_mime_words(s):
       return s
 
 def normalize_text(text):
+  """
+  Normaliza texto eliminando emojis, caracteres especiales y espacios extra.
+  """
   if not isinstance(text, str):
       return ""
+  # Eliminar emojis y caracteres no alfanuméricos (excepto espacios)
+  text = re.sub(r"[^\w\s]", " ", text)
+  # Pasar a minúsculas y colapsar espacios
   return re.sub(r"\s+", " ", text.strip().lower())
 
 def parse_email_body(email_message):
@@ -106,14 +116,21 @@ def detect_alert(from_email, subject, body):
   subject_norm = normalize_text(subject)
   body_norm = normalize_text(body)
 
-  activa_pattern = re.compile(r"alerta\s*activa", re.IGNORECASE)
-  resuelta_pattern = re.compile(r"alerta\s*resuelta", re.IGNORECASE)
+  # Patrones más flexibles: permiten guiones, espacios o nada después
+  activa_pattern = re.compile(r"alerta\s*activa[\s\-]*", re.IGNORECASE)
+  resuelta_pattern = re.compile(r"alerta\s*resuelta[\s\-]*", re.IGNORECASE)
 
   alert_type = None
   if activa_pattern.search(subject_norm) or activa_pattern.search(body_norm):
       alert_type = "ACTIVA"
   elif resuelta_pattern.search(subject_norm) or resuelta_pattern.search(body_norm):
       alert_type = "RESUELTA"
+
+  # Logs de depuración
+  logging.info(f"[DEBUG] Asunto original: {subject}")
+  logging.info(f"[DEBUG] Asunto normalizado: {subject_norm}")
+  logging.info(f"[DEBUG] Cuerpo normalizado (primeros 200 chars): {body_norm[:200]}")
+  logging.info(f"[DEBUG] alert_type detectado: {alert_type}")
 
   alert_id = extract_alert_id(body)
   if not alert_id:
