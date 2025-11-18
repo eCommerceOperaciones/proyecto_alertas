@@ -92,6 +92,9 @@ pipeline {
        // Ejecutar script Selenium
        // =========================
        stage('Ejecutar script de alerta') {
+         when {
+            expression {return params.ALERT_TYPE == 'ACTIVA'}
+         }
            steps {
                withEnv([
                    "ALERT_NAME=${params.ALERT_NAME}",
