@@ -19,7 +19,7 @@ if os.path.exists(ENV_PATH):
   load_dotenv(dotenv_path=ENV_PATH)
 
 WORKSPACE = os.getenv("WORKSPACE", os.getcwd())
-AREA_PRIVADA_URL = os.getenv("AREA_PRIVADA_URL", "bloqueado")
+AREA_PRIVADA_URL = os.getenv("AREA_PRIVADA_URL", "https://ovt.gencat.cat/carpetaciutadana360#/acces")
 DEFAULT_WAIT = int(os.getenv("DEFAULT_WAIT", "15"))
 ALERT_ID = os.getenv("ALERT_ID", datetime.now().strftime("%Y%m%d_%H%M%S"))
 ALERT_NAME = os.getenv("ALERT_NAME", "Area Privada")
