@@ -4,7 +4,6 @@ import sys
 import os
 import logging
 import shutil
-from datetime import datetime
 from dispatcher.loader import load_script_path
 
 logging.basicConfig(
@@ -44,11 +43,15 @@ def main():
   logging.info(f"ALERT_ID: {alert_id}")
 
   run_dir = os.path.join(WORKSPACE, "runs", alert_id)
+  status_file_workspace = os.path.join(WORKSPACE, "status.txt")
 
-  # 🔹 Limpieza SIEMPRE, incluso para RESUELTA
+  # 🔹 Limpieza SIEMPRE
   if os.path.exists(run_dir):
       logging.warning(f"Carpeta de ejecución existente para ALERT_ID {alert_id}, limpiando...")
       shutil.rmtree(run_dir)
+  if os.path.exists(status_file_workspace):
+      logging.warning("status.txt existente, eliminando...")
+      os.remove(status_file_workspace)
 
   logs_dir = os.path.join(run_dir, "logs")
   screenshots_dir = os.path.join(run_dir, "screenshots")
@@ -62,7 +65,7 @@ def main():
   # 🚫 Si es RESUELTA, no ejecutar Selenium
   if alert_type == "RESUELTA":
       logging.info("🔹 ALERTA RESUELTA detectada → No se ejecuta Selenium, solo se continuará con correo/Slack.")
-      with open(os.path.join(WORKSPACE, "status.txt"), "w") as f:
+      with open(status_file_workspace, "w") as f:
           f.write("resuelta")
       sys.exit(0)
 
@@ -79,7 +82,6 @@ def main():
       sys.exit(2)
 
   log_file = os.path.join(logs_dir, "execution.log")
-  status_file_workspace = os.path.join(WORKSPACE, "status.txt")
 
   cmd = [sys.executable, script_abspath, args.profile, alert_name, from_email, subject, body]
 
