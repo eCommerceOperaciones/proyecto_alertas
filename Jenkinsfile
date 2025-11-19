@@ -59,7 +59,11 @@ pipeline {
 
      stage('Preparar entorno') {
          steps {
-             cleanWs() // Limpia todo el workspace antes de crear el venv
+             script {
+                 if (params.ALERT_ID) {
+                     sh "find runs/${params.ALERT_ID} -type f -mmin +5 -exec rm -rf {} + || true"
+                 }
+             }
              sh """
                  python3 -m venv '${PYTHON_VENV}'
                  '${PYTHON_VENV}/bin/pip' install --upgrade pip
