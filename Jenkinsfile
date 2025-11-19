@@ -13,6 +13,9 @@ Este pipeline:
 */
 
 pipeline {
+      options {
+      cleanWs() // Limpia el workspace al final del build
+      }
  agent { label 'main' }
 
  parameters {
