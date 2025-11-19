@@ -13,9 +13,6 @@ Este pipeline:
 */
 
 pipeline {
-      options {
-      cleanWs() // Limpia el workspace al final del build
-      }
  agent { label 'main' }
 
  parameters {
@@ -62,6 +59,7 @@ pipeline {
 
      stage('Preparar entorno') {
          steps {
+             cleanWs() // Limpia todo el workspace antes de crear el venv
              sh """
                  python3 -m venv '${PYTHON_VENV}'
                  '${PYTHON_VENV}/bin/pip' install --upgrade pip
