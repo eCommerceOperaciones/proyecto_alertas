@@ -150,8 +150,10 @@ stages {
       
                 // 📌 Condición para enviar correo
                 def enviarCorreo = false
-                if (status != 'falso_positivo') {
-                    enviarCorreo = true
+                if (params.ALERT_TYPE == 'RESUELTA') {
+                  enviarCorreo = true
+                } else if (status != 'falso_positivo') {
+                  enviarCorreo = true
                 } else if (params.RETRY_COUNT.toInteger() >= params.MAX_RETRIES.toInteger()) {
                     enviarCorreo = true
                 }
