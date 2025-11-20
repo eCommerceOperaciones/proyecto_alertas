@@ -13,8 +13,17 @@ def extract_fecha_resolucion(body: str) -> str:
   Extrae la fecha de resolución desde el cuerpo del correo.
   Formato esperado: 'Recuperació: dd/MM/yyyy HH:mm:ss'
   """
-  match = re.search(r"Recuperació:\s*(\d{2}/\d{2}/\d{4}\s+\d{2}:\d{2}:\d{2})", body)
+  match = re.search(r"Recuperaci[oó]:\s*(\d{2}/\d{2}/\d{4}\s+\d{2}:\d{2}:\d{2})", body)
   return match.group(1) if match else ""
+
+def clean_email_body(email_body: str) -> str:
+  """
+  Limpia el cuerpo del correo eliminando disclaimers y repeticiones.
+  """
+  # Cortar en el primer disclaimer
+  if "Este mensaje va dirigido" in email_body:
+      email_body = email_body.split("Este mensaje va dirigido")[0]
+  return email_body.strip()
 
 def send_slack_alert(alert_id: str, alert_name: str, alert_type: str, status: str, email_body: str, jenkins_url: str = None, ticket_url: str = None) -> bool:
   """
@@ -25,8 +34,8 @@ def send_slack_alert(alert_id: str, alert_name: str, alert_type: str, status: st
       print("[WARN] SLACK_WEBHOOK_URL no configurado.")
       return False
 
-  # Sanitizar email_body para evitar problemas de escape
-  email_body = email_body.replace("\\", "\\\\").replace("\n", " ").strip()
+  # Limpiar el cuerpo del correo
+  email_body = clean_email_body(email_body)
 
   # Extraer datos clave
   fecha_recepcion = alert_id  # Si ALERT_ID es fecha, usar directamente
@@ -43,16 +52,16 @@ def send_slack_alert(alert_id: str, alert_name: str, alert_type: str, status: st
   except Exception as e:
       print(f"[WARN] No se pudo calcular duración: {e}")
 
-  # Criticidad y afectación
+  # Criticidad y afectación (solo primera coincidencia)
   criticidad = "Crítica" if "Crítica" in email_body else "Alta"
-  afectacion_match = re.search(r"Afectació:\s*(.+)", email_body)
-  afectacion = afectacion_match.group(1) if afectacion_match else "No especificada"
+  afectacion_match = re.search(r"Afectaci[oó]:\s*(.+)", email_body)
+  afectacion = afectacion_match.group(1).strip() if afectacion_match else "No especificada"
 
-  # Descripción y error
-  descripcion_match = re.search(r"Descripció:\s*(.+)", email_body)
-  descripcion = descripcion_match.group(1) if descripcion_match else "No disponible"
+  # Descripción y error (solo primera coincidencia)
+  descripcion_match = re.search(r"Descripci[oó]:\s*(.+)", email_body)
+  descripcion = descripcion_match.group(1).strip() if descripcion_match else "No disponible"
   error_match = re.search(r"Error:\s*(.+)", email_body)
-  error = error_match.group(1) if error_match else "No especificado"
+  error = error_match.group(1).strip() if error_match else "No especificado"
 
   # Color según criticidad
   color_map = {
