@@ -53,7 +53,7 @@ stages {
 
     stage('Checkout') {
         steps {
-            git branch: 'Dev_AREA_PRIVADA', url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git''
+            git branch: 'Dev_AREA_PRIVADA', url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git'
         }
     }
 
