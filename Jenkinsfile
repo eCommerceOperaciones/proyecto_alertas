@@ -29,7 +29,7 @@ stages {
     stage('Set Build Name') {
        steps {
            script {
-               currentBuild.displayName = "#${env.BUILD_NUMBER} - ALERT_ID: ${params.ALERT_ID}"
+               currentBuild.displayName = "#${env.BUILD_NUMBER} - ALERT_ID: ${params.ALERT_ID - ALERT_ID: ${params.ALERT_STATUS}}"
                currentBuild.description = "Alerta: ${params.ALERT_NAME} (${params.ALERT_TYPE})"
            }
        }
