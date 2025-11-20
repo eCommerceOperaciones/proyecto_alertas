@@ -167,16 +167,15 @@ except Exception as e:
                 def realAlertId = readFile('current_alert_id.txt').trim()
                 def status = fileExists('status.txt') ? readFile('status.txt').trim() : "desconocido"
       
-                // Escape seguro de EMAIL_BODY
+                // Escapar EMAIL_BODY como JSON válido
                 def safeEmailBody = groovy.json.JsonOutput.toJson(params.EMAIL_BODY)
       
                 // Generar script Python sin indentación extra
                 def slackScript = """
-      import json
       from utils.slack_notifier import send_slack_alert
       
-      # Cargar cuerpo del correo escapado desde Jenkins
-      email_body = json.loads(${safeEmailBody})
+      # EMAIL_BODY ya escapado desde Jenkins
+      email_body = ${safeEmailBody}
       
       send_slack_alert(
         alert_id='${params.ALERT_ID}',
