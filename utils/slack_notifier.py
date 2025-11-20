@@ -3,15 +3,20 @@ import re
 import requests
 from datetime import datetime
 from dotenv import load_dotenv
+import json
 
 load_dotenv()
 SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
 
-def extract_fecha_resolucion(body):
+def extract_fecha_resolucion(body: str) -> str:
+  """
+  Extrae la fecha de resolución desde el cuerpo del correo.
+  Formato esperado: 'Recuperació: dd/MM/yyyy HH:mm:ss'
+  """
   match = re.search(r"Recuperació:\s*(\d{2}/\d{2}/\d{4}\s+\d{2}:\d{2}:\d{2})", body)
   return match.group(1) if match else ""
 
-def send_slack_alert(alert_id, alert_name, alert_type, status, email_body, jenkins_url=None, ticket_url=None):
+def send_slack_alert(alert_id: str, alert_name: str, alert_type: str, status: str, email_body: str, jenkins_url: str = None, ticket_url: str = None) -> bool:
   """
   Envía una alerta enriquecida a Slack usando datos reales del pipeline.
   """
@@ -19,6 +24,9 @@ def send_slack_alert(alert_id, alert_name, alert_type, status, email_body, jenki
   if not SLACK_WEBHOOK_URL:
       print("[WARN] SLACK_WEBHOOK_URL no configurado.")
       return False
+
+  # Sanitizar email_body para evitar problemas de escape
+  email_body = email_body.replace("\\", "\\\\").replace("\n", " ").strip()
 
   # Extraer datos clave
   fecha_recepcion = alert_id  # Si ALERT_ID es fecha, usar directamente
@@ -32,19 +40,19 @@ def send_slack_alert(alert_id, alert_name, alert_type, status, email_body, jenki
           start = datetime.strptime(fecha_recepcion, fmt)
           end = datetime.strptime(fecha_resolucion, fmt)
           duracion = f"{int((end - start).total_seconds() / 60)} min"
-  except Exception:
-      pass
+  except Exception as e:
+      print(f"[WARN] No se pudo calcular duración: {e}")
 
   # Criticidad y afectación
   criticidad = "Crítica" if "Crítica" in email_body else "Alta"
-  afectacion = re.search(r"Afectació:\s*(.+)", email_body)
-  afectacion = afectacion.group(1) if afectacion else "No especificada"
+  afectacion_match = re.search(r"Afectació:\s*(.+)", email_body)
+  afectacion = afectacion_match.group(1) if afectacion_match else "No especificada"
 
   # Descripción y error
-  descripcion = re.search(r"Descripció:\s*(.+)", email_body)
-  descripcion = descripcion.group(1) if descripcion else "No disponible"
-  error = re.search(r"Error:\s*(.+)", email_body)
-  error = error.group(1) if error else "No especificado"
+  descripcion_match = re.search(r"Descripció:\s*(.+)", email_body)
+  descripcion = descripcion_match.group(1) if descripcion_match else "No disponible"
+  error_match = re.search(r"Error:\s*(.+)", email_body)
+  error = error_match.group(1) if error_match else "No especificado"
 
   # Color según criticidad
   color_map = {
@@ -54,6 +62,13 @@ def send_slack_alert(alert_id, alert_name, alert_type, status, email_body, jenki
       "Baja": "#36a64f"
   }
   color = color_map.get(criticidad, "#36a64f")
+
+  # Construir acciones sin elementos vacíos
+  actions = []
+  if jenkins_url:
+      actions.append({"type": "button", "text": {"type": "plain_text", "text": "Ver en Jenkins"}, "url": jenkins_url})
+  if ticket_url:
+      actions.append({"type": "button", "text": {"type": "plain_text", "text": "Ver Ticket"}, "url": ticket_url})
 
   # Payload enriquecido
   payload = {
@@ -89,17 +104,17 @@ def send_slack_alert(alert_id, alert_name, alert_type, status, email_body, jenki
           {
               "type": "section",
               "text": {"type": "mrkdwn", "text": f"*Afectación:*\n{afectacion}"}
-          },
-          {
-              "type": "actions",
-              "elements": [
-                  {"type": "button", "text": {"type": "plain_text", "text": "Ver en Jenkins"}, "url": jenkins_url} if jenkins_url else {},
-                  {"type": "button", "text": {"type": "plain_text", "text": "Ver Ticket"}, "url": ticket_url} if ticket_url else {}
-              ]
           }
       ]
   }
 
+  if actions:
+      payload["blocks"].append({"type": "actions", "elements": actions})
+
+  # Depuración: imprimir payload antes de enviar
+  print(json.dumps(payload, indent=2, ensure_ascii=False))
+
+  # Enviar a Slack
   try:
       resp = requests.post(SLACK_WEBHOOK_URL, json=payload)
       if resp.status_code == 200:

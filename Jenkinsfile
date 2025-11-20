@@ -162,25 +162,33 @@ except Exception as e:
       }
 
       stage('Notificar en Slack') {
-          steps {
-              script {
-                  def realAlertId = readFile('current_alert_id.txt').trim()
-                  def status = fileExists('status.txt') ? readFile('status.txt').trim() : "desconocido"
-
-                  writeFile file: 'slack_notify.py', text: """
-from utils.slack_notifier import send_slack_alert
-send_slack_alert(
-  alert_id='${params.ALERT_ID}',
-  alert_name='${params.ALERT_NAME}',
-  alert_type='${params.ALERT_TYPE}',
-  status='${readFile('status.txt').trim()}',
-  email_body='''${params.EMAIL_BODY}''',
-  jenkins_url='${env.BUILD_URL}'
-)
-"""
-                  sh "'${PYTHON_VENV}/bin/python' slack_notify.py"
-              }
-          }
+        steps {
+            script {
+                def realAlertId = readFile('current_alert_id.txt').trim()
+                def status = fileExists('status.txt') ? readFile('status.txt').trim() : "desconocido"
+      
+                // Usamos JsonOutput para escapar correctamente EMAIL_BODY
+                def safeEmailBody = groovy.json.JsonOutput.toJson(params.EMAIL_BODY)
+      
+                writeFile file: 'slack_notify.py', text: """
+      import json
+      from utils.slack_notifier import send_slack_alert
+      
+      # Cargar cuerpo del correo escapado desde Jenkins
+      email_body = json.loads(${safeEmailBody})
+      
+      send_slack_alert(
+        alert_id='${params.ALERT_ID}',
+        alert_name='${params.ALERT_NAME}',
+        alert_type='${params.ALERT_TYPE}',
+        status='${status}',
+        email_body=email_body,
+        jenkins_url='${env.BUILD_URL}'
+      )
+      """
+                sh "'${PYTHON_VENV}/bin/python' slack_notify.py"
+            }
+        }
       }
 
       stage('Reintento si falso positivo') {
