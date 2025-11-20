@@ -24,6 +24,15 @@ pipeline {
       SHARED_EXCEL = "/var/lib/jenkins/shared/alertas.xlsx"
   }
 
+  stage('Set Build Name') {
+    steps {
+        script {
+            currentBuild.displayName = "#${env.BUILD_NUMBER} - ALERT_ID: ${params.ALERT_ID}"
+            currentBuild.description = "Alerta: ${params.ALERT_NAME} (${params.ALERT_TYPE})"
+        }
+    }
+}
+
   stages {
 
       stage('Validar parámetros y credenciales') {
