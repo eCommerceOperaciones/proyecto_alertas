@@ -167,10 +167,11 @@ except Exception as e:
                 def realAlertId = readFile('current_alert_id.txt').trim()
                 def status = fileExists('status.txt') ? readFile('status.txt').trim() : "desconocido"
       
-                // Usamos JsonOutput para escapar correctamente EMAIL_BODY
+                // Escape seguro de EMAIL_BODY
                 def safeEmailBody = groovy.json.JsonOutput.toJson(params.EMAIL_BODY)
       
-                writeFile file: 'slack_notify.py', text: """
+                // Generar script Python sin indentación extra
+                def slackScript = """
       import json
       from utils.slack_notifier import send_slack_alert
       
@@ -185,7 +186,9 @@ except Exception as e:
         email_body=email_body,
         jenkins_url='${env.BUILD_URL}'
       )
-      """
+      """.stripIndent()
+      
+                writeFile file: 'slack_notify.py', text: slackScript
                 sh "'${PYTHON_VENV}/bin/python' slack_notify.py"
             }
         }
