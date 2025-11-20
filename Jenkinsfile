@@ -115,52 +115,87 @@ stages {
         steps {
             script {
                 def realAlertId = readFile('current_alert_id.txt').trim()
-
+                def status = fileExists('status.txt') ? readFile('status.txt').trim() : "desconocido"
+      
+                // Ejecutar script Python para generar correo y actualizar Excel
                 sh """
                     set +e
                     '${PYTHON_VENV}/bin/python' -c "
-from utils.email_generator import generate_email_and_excel_fields
-from utils.excel_manager import add_alert, close_alert
-import os, traceback
-
-try:
-html, fields = generate_email_and_excel_fields(
-    os.environ['SCRIPT_NAME'],
-    os.environ['EMAIL_BODY'],
-    os.environ['ALERT_TYPE'],
-    os.environ.get('ALERT_ID', None)
-)
-with open('email_body.html', 'w', encoding='utf-8') as f:
-    f.write(html)
-if os.environ['ALERT_TYPE'] == 'ACTIVA':
-    add_alert(fields)
-elif os.environ['ALERT_TYPE'] == 'RESUELTA':
-    close_alert(fields)
-except Exception as e:
-print('[WARN] No se pudo actualizar el Excel compartido:', e)
-traceback.print_exc()
-"
+      from utils.email_generator import generate_email_and_excel_fields
+      from utils.excel_manager import add_alert, close_alert
+      import os, traceback
+      
+      try:
+        html, fields = generate_email_and_excel_fields(
+            os.environ['SCRIPT_NAME'],
+            os.environ['EMAIL_BODY'],
+            os.environ['ALERT_TYPE'],
+            os.environ.get('ALERT_ID', None)
+        )
+        with open('email_body.html', 'w', encoding='utf-8') as f:
+            f.write(html)
+        if os.environ['ALERT_TYPE'] == 'ACTIVA':
+            add_alert(fields)
+        elif os.environ['ALERT_TYPE'] == 'RESUELTA':
+            close_alert(fields)
+      except Exception as e:
+        print('[WARN] No se pudo actualizar el Excel compartido:', e)
+        traceback.print_exc()
+      "
                     set -e
                 """
-
+      
+                // Copiar Excel al workspace
                 sh "cp ${SHARED_EXCEL} alertas.xlsx"
-
-                if (params.ALERT_TYPE == 'ACTIVA') {
-                    archiveArtifacts artifacts: "alertas.xlsx, runs/${realAlertId}/logs/*.log, runs/${realAlertId}/screenshots/*.png", allowEmptyArchive: true
-                } else {
-                    archiveArtifacts artifacts: "alertas.xlsx", allowEmptyArchive: true
+      
+                // 📌 Condición para enviar correo
+                def enviarCorreo = false
+                if (status != 'falso_positivo') {
+                    enviarCorreo = true
+                } else if (params.RETRY_COUNT.toInteger() >= params.MAX_RETRIES.toInteger()) {
+                    enviarCorreo = true
                 }
-
-                emailext(
-                    subject: "📄 ${params.ALERT_NAME} ${params.ALERT_ID} ${env.ALERT_STATUS} - Interno",
-                    body: readFile('email_body.html'),
-                    mimeType: 'text/html',
-                    to: "ecommerceoperaciones01@gmail.com",
-                    attachmentsPattern: (params.ALERT_TYPE == 'ACTIVA') ? "runs/${realAlertId}/logs/*.log, runs/${realAlertId}/screenshots/*.png, alertas.xlsx" : "alertas.xlsx"
-                )
+      
+                if (enviarCorreo) {
+                    if (params.ALERT_TYPE == 'ACTIVA') {
+                        archiveArtifacts artifacts: "alertas.xlsx, runs/${realAlertId}/logs/*.log, runs/${realAlertId}/screenshots/*.png", allowEmptyArchive: true
+                        emailext(
+                            subject: "📄 ${params.ALERT_NAME} ${params.ALERT_ID} ${status} - Interno",
+                            body: """
+                                <p>Se adjuntan logs y capturas de la ejecución.</p>
+                                <p><b>Excel de alertas:</b> <a href='${env.BUILD_URL}artifact/alertas.xlsx'>Descargar archivo</a></p>
+                            """,
+                            mimeType: 'text/html',
+                            to: "ecommerceoperaciones01@gmail.com",
+                            attachmentsPattern: "runs/${realAlertId}/logs/*.log, runs/${realAlertId}/screenshots/*.png, alertas.xlsx"
+                        )
+                    } else {
+                        archiveArtifacts artifacts: "alertas.xlsx", allowEmptyArchive: true
+                        emailext(
+                            subject: "📄 ${params.ALERT_NAME} ${params.ALERT_ID} ${status} - Interno",
+                            body: """
+                                <p>Alerta resuelta. No se adjuntan capturas ni logs de Selenium.</p>
+                                <p><b>Excel de alertas:</b> <a href='${env.BUILD_URL}artifact/alertas.xlsx'>Descargar archivo</a></p>
+                            """,
+                            mimeType: 'text/html',
+                            to: "ecommerceoperaciones01@gmail.com",
+                            attachmentsPattern: "alertas.xlsx"
+                        )
+                    }
+      
+                    // Correo externo con HTML generado
+                    emailext(
+                        subject: "Alerta ${params.ALERT_NAME} (${params.ALERT_TYPE})",
+                        body: readFile('email_body.html'),
+                        mimeType: 'text/html',
+                        to: "ecommerceoperaciones01@gmail.com"
+                    )
+                } else {
+                    echo "⏩ No se envía correo todavía, esperando reintento..."
+                }
             }
         }
-    }
+      }
 
     stage('Notificar en Slack') {
       steps {
