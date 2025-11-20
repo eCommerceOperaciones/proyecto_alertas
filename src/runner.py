@@ -45,12 +45,12 @@ def main():
   run_dir = os.path.join(WORKSPACE, "runs", alert_id)
   status_file_workspace = os.path.join(WORKSPACE, "status.txt")
 
-  # 🔹 Limpieza SIEMPRE
+  # 🔹 Limpieza SIEMPRE antes de ejecutar
   if os.path.exists(run_dir):
       logging.warning(f"Carpeta de ejecución existente para ALERT_ID {alert_id}, limpiando...")
       shutil.rmtree(run_dir)
   if os.path.exists(status_file_workspace):
-      logging.warning("status.txt existente, eliminando...")
+      logging.warning("status.txt existente en workspace, eliminando...")
       os.remove(status_file_workspace)
 
   logs_dir = os.path.join(run_dir, "logs")
@@ -65,8 +65,30 @@ def main():
   # 🚫 Si es RESUELTA, no ejecutar Selenium
   if alert_type == "RESUELTA":
       logging.info("🔹 ALERTA RESUELTA detectada → No se ejecuta Selenium, solo se continuará con correo/Slack.")
+
+      # 🧹 Limpieza de vestigios de status.txt anteriores
+      old_status_logs = os.path.join(WORKSPACE, "runs", alert_id, "logs", "status.txt")
+      if os.path.exists(old_status_logs):
+          logging.warning(f"Eliminando status.txt viejo en: {old_status_logs}")
+          try:
+              os.remove(old_status_logs)
+          except Exception as e:
+              logging.error(f"No se pudo eliminar {old_status_logs}: {e}")
+
+      # 🧹 Limpieza de carpeta de ejecución anterior
+      old_run_dir = os.path.join(WORKSPACE, "runs", alert_id)
+      if os.path.exists(old_run_dir):
+          logging.warning(f"Eliminando carpeta de ejecución anterior: {old_run_dir}")
+          try:
+              shutil.rmtree(old_run_dir)
+          except Exception as e:
+              logging.error(f"No se pudo eliminar {old_run_dir}: {e}")
+
+      # ✅ Escribir estado correcto
       with open(status_file_workspace, "w") as f:
           f.write("resuelta")
+
+      logging.info("Estado 'resuelta' escrito en status.txt del workspace.")
       sys.exit(0)
 
   # --- Ejecución normal para ACTIVA ---
@@ -116,6 +138,9 @@ def main():
       sys.exit(0)
   elif status == "alarma_confirmada":
       logging.info("Resultado: alarma_confirmada → Jenkins continuará flujo alerta real")
+      sys.exit(0)
+  elif status == "resuelta":
+      logging.info("Resultado: resuelta → Jenkins notificará cierre")
       sys.exit(0)
   else:
       logging.error(f"Estado desconocido: {status}")
