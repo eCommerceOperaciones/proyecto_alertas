@@ -200,21 +200,28 @@ stages {
       }
 
     stage('Notificar en Slack') {
+      when {
+          expression {
+              return params.ALERT_TYPE == 'RESUELTA' ||
+                     env.ALERT_STATUS != 'falso_positivo' ||
+                     params.RETRY_COUNT.toInteger() >= params.MAX_RETRIES.toInteger()
+          }
+      }
       steps {
           script {
               def safeEmailBody = groovy.json.JsonOutput.toJson(params.EMAIL_BODY)
               def slackScript = """
-from utils.slack_notifier import send_slack_alert
-email_body = ${safeEmailBody}
-send_slack_alert(
-alert_id='${params.ALERT_ID}',
-alert_name='${params.ALERT_NAME}',
-alert_type='${params.ALERT_TYPE}',
-status='${env.ALERT_STATUS}',
-email_body=email_body,
-jenkins_url='${env.BUILD_URL}'
-)
-""".stripIndent()
+    from utils.slack_notifier import send_slack_alert
+    email_body = ${safeEmailBody}
+    send_slack_alert(
+      alert_id='${params.ALERT_ID}',
+      alert_name='${params.ALERT_NAME}',
+      alert_type='${params.ALERT_TYPE}',
+      status='${env.ALERT_STATUS}',
+      email_body=email_body,
+      jenkins_url='${env.BUILD_URL}'
+    )
+    """.stripIndent()
               writeFile file: 'slack_notify.py', text: slackScript
               sh "'${PYTHON_VENV}/bin/python' slack_notify.py"
           }
