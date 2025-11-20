@@ -170,10 +170,11 @@ except Exception as e:
                   writeFile file: 'slack_notify.py', text: """
 from utils.slack_notifier import send_slack_alert
 send_slack_alert(
-  alert_id='${realAlertId}',
+  alert_id='${params.ALERT_ID}',
   alert_name='${params.ALERT_NAME}',
   alert_type='${params.ALERT_TYPE}',
-  status='${status}',
+  status='${readFile('status.txt').trim()}',
+  email_body='''${params.EMAIL_BODY}''',
   jenkins_url='${env.BUILD_URL}'
 )
 """
