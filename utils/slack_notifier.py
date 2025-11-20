@@ -1,3 +1,4 @@
+# utils/slack_notifier.py
 import os
 import re
 import requests
@@ -61,7 +62,7 @@ def parse_email_body(email_body: str) -> dict:
 
   return data
 
-def send_slack_alert_from_body(alert_id: str, alert_name: str, alert_type: str, email_body: str, jenkins_url: str = None, ticket_url: str = None):
+def send_slack_alert(alert_id: str, alert_name: str, alert_type: str, email_body: str, jenkins_url: str = None, ticket_url: str = None):
   """
   Envía alerta a Slack extrayendo todos los datos del body, pero manteniendo el alert_id como identificador.
   """
