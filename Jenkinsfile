@@ -1,6 +1,6 @@
 /*
 ================================================================================
- Jenkinsfile – Pipeline CI/CD para el proyecto GSIT_Alertas
+ Jenkinsfile – Pipeline para el proyecto GSIT_Alertas
  Autor: Rodrigo Simoes
 
  Descripción general:
