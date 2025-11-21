@@ -58,12 +58,12 @@ Jenkins archiva logs + adjuntos
     │   ├── acces_frontal_emd.py
     │   ├── ejemplo_otra_alerta.py
     │   └── ...
-    └── utils/
+    ├── utils/
     │    ├── email_generator.py   ← Menjo de crear correos
     │    ├── excel_manager.py     ← Manejo seguro de Excel compartido
     │    └── slack_notifier.py    ← Notificaciones Slack
     │  
-    ├── mail_template/
+    └── mail_template/
          ├── acces_frontal_emd.html   ← Templates HTML para correos 
          └── ...
     
@@ -101,7 +101,7 @@ JENKINS_URL=https://jenkins.empresa.com
 JENKINS_USER=svc_gsit
 JENKINS_TOKEN=11abcd12345efgh67890ij
 
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
 
 EXCEL_PATH=//servidor/compartido/SEGUIMIENTO_ALERTAS.xlsx
 ```
