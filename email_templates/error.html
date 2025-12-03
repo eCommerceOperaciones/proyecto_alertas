@@ -1,0 +1,15 @@
+<h2 style="color:red;">❌ Error en ejecución</h2>
+<p>Se ha producido un error durante la ejecución del script <b>{{script_name}}</b> para la alerta <b>{{alert_name}}</b> ({{alert_type}}).</p>
+
+<h3>Detalles técnicos:</h3>
+<ul>
+    <li><b>Alert ID:</b> {{alert_id}}</li>
+    <li><b>Mensaje de error:</b> {{error_message}}</li>
+    <li><b>Reintentos realizados:</b> {{retry_count}} / {{max_retries}}</li>
+</ul>
+
+<h3>Evidencia:</h3>
+<p>Se adjuntan capturas de pantalla y logs para análisis.</p>
+
+<h3>Acciones siguientes:</h3>
+<p>El equipo técnico debe revisar los artefactos adjuntos y determinar si se requiere reintento o escalado.</p>
