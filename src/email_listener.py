@@ -136,7 +136,6 @@ def check_email():
 
                 if script_to_run and alert_id:
                     alerts_found.append({
-                        "alert_detected": True,
                         "alert_name": alert_name,
                         "script": script_to_run,
                         "alert_type": alert_type,
@@ -148,14 +147,10 @@ def check_email():
                     # Solo marcar como leído si es alerta válida
                     server.add_flags(msgid, ['\\Seen'])
 
-            # Si no hay alertas válidas
-            if not alerts_found:
-                alerts_found.append({"alert_detected": False})
-
-            print(json.dumps(alerts_found))
     except Exception as e:
         logging.error(f"Error en check_email: {e}")
-        print(json.dumps([{"alert_detected": False, "error": str(e)}]))
+
+    print(json.dumps(alerts_found))
 
 if __name__ == "__main__":
     check_email()
