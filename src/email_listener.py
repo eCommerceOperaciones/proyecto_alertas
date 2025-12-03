@@ -117,6 +117,7 @@ def detect_alert(from_email, subject, body):
     return None, None, alert_type, alert_id
 
 def check_email():
+    alerts_found = []
     try:
         with IMAPClient(IMAP_SERVER, port=IMAP_PORT, ssl=True) as server:
             server.login(EMAIL_USER, EMAIL_PASS)
@@ -134,7 +135,7 @@ def check_email():
                 alert_name, script_to_run, alert_type, alert_id = detect_alert(from_email, subject, body)
 
                 if script_to_run and alert_id:
-                    alert_data = {
+                    alerts_found.append({
                         "alert_detected": True,
                         "alert_name": alert_name,
                         "script": script_to_run,
@@ -143,17 +144,18 @@ def check_email():
                         "email_from": from_email,
                         "email_subject": subject,
                         "email_body": body
-                    }
+                    })
                     # Solo marcar como leído si es alerta válida
                     server.add_flags(msgid, ['\\Seen'])
-                    print(json.dumps(alert_data))
-                    return
 
             # Si no hay alertas válidas
-            print(json.dumps({"alert_detected": False}))
+            if not alerts_found:
+                alerts_found.append({"alert_detected": False})
+
+            print(json.dumps(alerts_found))
     except Exception as e:
         logging.error(f"Error en check_email: {e}")
-        print(json.dumps({"alert_detected": False, "error": str(e)}))
+        print(json.dumps([{"alert_detected": False, "error": str(e)}]))
 
 if __name__ == "__main__":
     check_email()
