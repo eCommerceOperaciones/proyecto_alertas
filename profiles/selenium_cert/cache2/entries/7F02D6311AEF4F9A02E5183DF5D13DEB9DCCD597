@@ -1,0 +1,578 @@
+<!DOCTYPE html><html class="ap_integracio" xml:lang="ca-ES" lang="ca-ES" data-critters-container="true"><head><link rel="stylesheet" href="/assets/styles/spinner.css"><link rel="stylesheet" href="/styles.css"><style>:root{--bs-blue:#0d6efd;--bs-indigo:#6610f2;--bs-purple:#6f42c1;--bs-pink:#d63384;--bs-red:#dc3545;--bs-orange:#fd7e14;--bs-yellow:#ffc107;--bs-green:#198754;--bs-teal:#20c997;--bs-cyan:#0dcaf0;--bs-black:#000;--bs-white:#fff;--bs-gray:#6c757d;--bs-gray-dark:#343a40;--bs-gray-100:#f8f9fa;--bs-gray-200:#e9ecef;--bs-gray-300:#dee2e6;--bs-gray-400:#ced4da;--bs-gray-500:#adb5bd;--bs-gray-600:#6c757d;--bs-gray-700:#495057;--bs-gray-800:#343a40;--bs-gray-900:#212529;--bs-primary:#0d6efd;--bs-secondary:#6c757d;--bs-success:#198754;--bs-info:#0dcaf0;--bs-warning:#ffc107;--bs-danger:#dc3545;--bs-light:#f8f9fa;--bs-dark:#212529;--bs-primary-rgb:13, 110, 253;--bs-secondary-rgb:108, 117, 125;--bs-success-rgb:25, 135, 84;--bs-info-rgb:13, 202, 240;--bs-warning-rgb:255, 193, 7;--bs-danger-rgb:220, 53, 69;--bs-light-rgb:248, 249, 250;--bs-dark-rgb:33, 37, 41;--bs-primary-text-emphasis:#052c65;--bs-secondary-text-emphasis:#2b2f32;--bs-success-text-emphasis:#0a3622;--bs-info-text-emphasis:#055160;--bs-warning-text-emphasis:#664d03;--bs-danger-text-emphasis:#58151c;--bs-light-text-emphasis:#495057;--bs-dark-text-emphasis:#495057;--bs-primary-bg-subtle:#cfe2ff;--bs-secondary-bg-subtle:#e2e3e5;--bs-success-bg-subtle:#d1e7dd;--bs-info-bg-subtle:#cff4fc;--bs-warning-bg-subtle:#fff3cd;--bs-danger-bg-subtle:#f8d7da;--bs-light-bg-subtle:#fcfcfd;--bs-dark-bg-subtle:#ced4da;--bs-primary-border-subtle:#9ec5fe;--bs-secondary-border-subtle:#c4c8cb;--bs-success-border-subtle:#a3cfbb;--bs-info-border-subtle:#9eeaf9;--bs-warning-border-subtle:#ffe69c;--bs-danger-border-subtle:#f1aeb5;--bs-light-border-subtle:#e9ecef;--bs-dark-border-subtle:#adb5bd;--bs-white-rgb:255, 255, 255;--bs-black-rgb:0, 0, 0;--bs-font-sans-serif:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";--bs-font-monospace:SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;--bs-gradient:linear-gradient(180deg, rgba(255, 255, 255, .15), rgba(255, 255, 255, 0));--bs-body-font-family:var(--bs-font-sans-serif);--bs-body-font-size:1rem;--bs-body-font-weight:400;--bs-body-line-height:1.5;--bs-body-color:#212529;--bs-body-color-rgb:33, 37, 41;--bs-body-bg:#fff;--bs-body-bg-rgb:255, 255, 255;--bs-emphasis-color:#000;--bs-emphasis-color-rgb:0, 0, 0;--bs-secondary-color:rgba(33, 37, 41, .75);--bs-secondary-color-rgb:33, 37, 41;--bs-secondary-bg:#e9ecef;--bs-secondary-bg-rgb:233, 236, 239;--bs-tertiary-color:rgba(33, 37, 41, .5);--bs-tertiary-color-rgb:33, 37, 41;--bs-tertiary-bg:#f8f9fa;--bs-tertiary-bg-rgb:248, 249, 250;--bs-heading-color:inherit;--bs-link-color:#0d6efd;--bs-link-color-rgb:13, 110, 253;--bs-link-decoration:underline;--bs-link-hover-color:#0a58ca;--bs-link-hover-color-rgb:10, 88, 202;--bs-code-color:#d63384;--bs-highlight-color:#212529;--bs-highlight-bg:#fff3cd;--bs-border-width:1px;--bs-border-style:solid;--bs-border-color:#dee2e6;--bs-border-color-translucent:rgba(0, 0, 0, .175);--bs-border-radius:.375rem;--bs-border-radius-sm:.25rem;--bs-border-radius-lg:.5rem;--bs-border-radius-xl:1rem;--bs-border-radius-xxl:2rem;--bs-border-radius-2xl:var(--bs-border-radius-xxl);--bs-border-radius-pill:50rem;--bs-box-shadow:0 .5rem 1rem rgba(0, 0, 0, .15);--bs-box-shadow-sm:0 .125rem .25rem rgba(0, 0, 0, .075);--bs-box-shadow-lg:0 1rem 3rem rgba(0, 0, 0, .175);--bs-box-shadow-inset:inset 0 1px 2px rgba(0, 0, 0, .075);--bs-focus-ring-width:.25rem;--bs-focus-ring-opacity:.25;--bs-focus-ring-color:rgba(13, 110, 253, .25);--bs-form-valid-color:#198754;--bs-form-valid-border-color:#198754;--bs-form-invalid-color:#dc3545;--bs-form-invalid-border-color:#dc3545}*,*:before,*:after{box-sizing:border-box}@media (prefers-reduced-motion: no-preference){:root{scroll-behavior:smooth}}body{margin:0;font-family:var(--bs-body-font-family);font-size:var(--bs-body-font-size);font-weight:var(--bs-body-font-weight);line-height:var(--bs-body-line-height);color:var(--bs-body-color);text-align:var(--bs-body-text-align);background-color:var(--bs-body-bg);-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:rgba(0,0,0,0)}:root{--bs-breakpoint-xs:0;--bs-breakpoint-sm:576px;--bs-breakpoint-md:768px;--bs-breakpoint-lg:992px;--bs-breakpoint-xl:1200px;--bs-breakpoint-xxl:1400px}:root{--bs-btn-close-filter: }:root{--bs-carousel-indicator-active-bg:#fff;--bs-carousel-caption-color:#fff;--bs-carousel-control-icon-filter: }@charset "UTF-8";@font-face{font-family:OpenSans;src:url(/assets/fonts/OpenSans-Regular.eot);src:url(/assets/fonts/OpenSans-Regular.eot?#iefix) format("embedded-opentype"),url(/assets/fonts/OpenSans-Regular.svg#OpenSans-Regular) format("svg"),url(/assets/fonts/OpenSans-Regular.ttf) format("truetype"),url(/assets/fonts/OpenSans-Regular.woff) format("woff"),url(/assets/fonts/OpenSans-Regular.woff2) format("woff2");font-weight:400;font-style:normal}body{font-family:OpenSans,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji",Segoe UI Symbol,"Noto Color Emoji";-webkit-font-smoothing:antialiased}html{position:relative;min-height:100%;scroll-behavior:smooth}body{background-color:#efefef;font-family:Open Sans,sans-serif}html,body{margin:0!important;padding:0!important}body{margin:0;padding:0;background-color:#fff!important;font-family:Open Sans,sans-serif}</style>
+			<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="WT.z_idioma" content="ca">
+
+<!---->
+<title>Àrea privada ciutadana. gencat.cat</title>
+<link rel="alternate" hreflang="ca" href="https://web.gencat.cat/ca/arees-privades/area-privada-ciutadana/index.html?t=1762416866005&amp;code=AP0001&amp;idioma=ca"><link rel="alternate" hreflang="es" href="https://web.gencat.cat/es/arees-privades/area-privada-ciutadana/index.html?t=1762416866005&amp;code=AP0001&amp;idioma=ca"><link rel="alternate" hreflang="en" href="https://web.gencat.cat/en/arees-privades/area-privada-ciutadana/index.html?t=1762416866005&amp;code=AP0001&amp;idioma=ca"><link rel="alternate" hreflang="oc" href="https://web.gencat.cat/oc/arees-privades/area-privada-ciutadana/index.html?t=1762416866005&amp;code=AP0001&amp;idioma=ca"><link rel="alternate" hreflang="x-default" href="https://web.gencat.cat/"><!--WEB GENCAT-->
+
+<link rel="shortcut icon" type="image/x-icon" href="https://web.gencat.cat/web/resources/fwkResponsives/common/img/favicon.ico">
+
+
+<link href="https://web.gencat.cat/web/resources/fwkResponsives/common/css/bootstrap.min.css" rel="stylesheet" type="text/css">
+<link href="https://web.gencat.cat/web/resources/fwkResponsives/common/css/styles.css" rel="stylesheet" type="text/css">
+<link href="https://web.gencat.cat/web/resources/fwkResponsives/common/css/leaflet.min.css" rel="stylesheet" type="text/css">
+<link href="https://web.gencat.cat/web/resources/fwkResponsives/common/css/master.responsive.css" rel="stylesheet" type="text/css">
+<!--[if IE 9]>
+	<link href="https://web.gencat.cat/web/resources/fwkResponsives/common/css/master.min.css" rel="stylesheet" type="text/css"/>
+	<link href="https://web.gencat.cat/web/resources/fwkResponsives/common/css/style_IE9.css" rel="stylesheet" type="text/css"/>
+<![endif]-->
+<script src="https://web.gencat.cat/web/resources/fwkResponsives/common/js/jquery.min.js" type="text/javascript"></script>
+<script src="https://web.gencat.cat/web/resources/fwkResponsives/common/js/jquery-ui.js" type="text/javascript"></script>
+<script src="https://web.gencat.cat/web/resources/fwkResponsives/common/js/master.min.js" type="text/javascript"></script>
+<script src="https://web.gencat.cat/web/resources/fwkResponsives/common/js/entorn_config.js" type="text/javascript"></script>
+<script src="https://web.gencat.cat/web/resources/fwkResponsives/common/js/generic_responsive.js" type="text/javascript"></script>
+<script src="https://web.gencat.cat/web/resources/fwkResponsives/common/js/master.responsive.js" type="text/javascript"></script>
+<!--[if lt IE 9]>
+	<link href="https://web.gencat.cat/web/resources/fwkResponsives/common/css/style_IE8.css" rel="stylesheet" type="text/css"/>
+	<script type="text/javascript" src="https://web.gencat.cat/web/resources/fwkResponsives/common/js/respond.min.js"></script>
+	<script type="text/javascript" src="https://web.gencat.cat/web/resources/fwkResponsives/common/js/modernizr.js"></script>
+<![endif]-->
+
+<link href="https://web.gencat.cat/web/resources/fwkResponsive/fpca_peu_area-privada-logos/css/fpca_peu_area-privada-logos.css" rel="stylesheet" type="text/css">
+<link href="https://web.gencat.cat/web/resources/fwkResponsive/fpca_peu_area-privada/css/fpca_peu_area-privada.css" rel="stylesheet" type="text/css">
+<link href="https://web.gencat.cat/web/resources/fwkResponsive/fpca_capcalera_area-privada/css/fpca_capcalera_area-privada.css" rel="stylesheet" type="text/css">
+<link href="https://web.gencat.cat/web/resources/fwkResponsive/fpca_subcapcalera_area-privada/css/fpca_subcapcalera_area-privada.css" rel="stylesheet" type="text/css">
+<script src="https://web.gencat.cat/web/resources/fwkResponsive/fpca_peu_area-privada/js/fpca_peu_area-privada.js" type="text/javascript"></script>
+<script src="https://web.gencat.cat/web/resources/fwkResponsive/fpca_capcalera_area-privada/js/fpca_capcalera_area-privada.js" type="text/javascript"></script>
+<script src="https://web.gencat.cat/web/resources/fwkResponsive/fpca_subcapcalera_area-privada/js/fpca_subcapcalera_area-privada.js" type="text/javascript"></script>
+<link href="https://web.gencat.cat/web/resources/fwkResponsives/common/css/print.css" rel="stylesheet" type="text/css">
+<meta property="og:title" content="Àrea privada ciutadana">
+			<meta property="og:url" content="http://web.gencat.cat/ca/arees-privades/area-privada-ciutadana/">
+			<meta property="og:type" content="">
+			<meta property="og:site_name" content="gencat.cat">
+			<meta property="og:image" content="http://web.gencat.cat/web/.content/Imatge/capcalera/NG_logo_generalitat2.png">
+					<meta property="og:image:secure_url" content="https://web.gencat.cat/web/.content/Imatge/capcalera/NG_logo_generalitat2.png">
+				<meta property="og:image:width" content="640">
+			<meta property="og:image:height" content="442">
+			<meta name="twitter:title" content="Àrea privada ciutadana">
+			<meta name="twitter:card" content="summary">
+			<meta name="twitter:site" content="@gencat">
+			<meta name="twitter:image" content="http://web.gencat.cat/web/.content/Imatge/capcalera/NG_logo_generalitat2.png">
+				<script type="text/javascript">
+(function(window, document, dataLayerName, id) {
+window[dataLayerName]=window[dataLayerName]||[],window[dataLayerName].push({start:(new Date).getTime(),event:"stg.start"});var scripts=document.getElementsByTagName('script')[0],tags=document.createElement('script');
+function stgCreateCookie(a,b,c){var d="";if(c){var e=new Date;e.setTime(e.getTime()+24*c*60*60*1e3),d="; expires="+e.toUTCString();f="; SameSite=Strict"}document.cookie=a+"="+b+d+f+"; path=/"}
+var isStgDebug=(window.location.href.match("stg_debug")||document.cookie.match("stg_debug"))&&!window.location.href.match("stg_disable_debug");stgCreateCookie("stg_debug",isStgDebug?1:"",isStgDebug?14:-1);
+var qP=[];dataLayerName!=="dataLayer"&&qP.push("data_layer_name="+dataLayerName),isStgDebug&&qP.push("stg_debug");var qPString=qP.length>0?("?"+qP.join("&")):"";
+tags.async=!0,tags.src="https://gencat.containers.piwik.pro/"+id+".js"+qPString,scripts.parentNode.insertBefore(tags,scripts);
+!function(a,n,i){a[n]=a[n]||{};for(var c=0;c<i.length;c++)!function(i){a[n][i]=a[n][i]||{},a[n][i].api=a[n][i].api||function(){var a=[].slice.call(arguments,0);"string"==typeof a[0]&&window[dataLayerName].push({event:n+"."+i+":"+a[0],parameters:[].slice.call(arguments,1)})}}(i[c])}(window,"ppms",["tm","cm"]);
+})(window, document, 'dataLayer', 'eb50131d-1482-4c39-a0fa-835d5e4dacd6');
+</script><script>
+	if(PluginGencat != null){
+		PluginGencat.externalurl = "https://web.gencat.cat";
+	}
+</script><!--ap_head--><style ng-app-id="ng">.cursor-pointer[_ngcontent-ng-c1792871938]{cursor:pointer}</style><style ng-app-id="ng">.feature-header-container[_ngcontent-ng-c4194904777]{width:100%;display:flex;justify-content:space-between;padding:0 1rem 1rem}.feature-header-container_description[_ngcontent-ng-c4194904777]{width:80%}.feature-header-container_image[_ngcontent-ng-c4194904777]{width:20%;display:flex;justify-content:center}@media screen and (max-width: 768px){.feature-header-container_image[_ngcontent-ng-c4194904777]{display:none}}.feature-header-container[_ngcontent-ng-c4194904777]   .h3[_ngcontent-ng-c4194904777]{margin-bottom:.5rem!important;font-family:OpenSans-Bold,sans-serif!important;line-height:1.2!important;font-size:2.5rem;text-align:left!important}.feature-header-container_image_content[_ngcontent-ng-c4194904777]{max-width:100%}</style></head>
+		<body>
+        <script type="text/javascript">
+        setTimeout(function() {
+            var botScript = document.createElement('script');
+            botScript.type = 'text/javascript';
+            botScript.src = '/assets/js/inbenta-conf.min.js';
+            document.body.prepend(botScript);
+        }, 1500);
+        </script>
+    <script type="text/javascript" src="/assets/env/env.js"></script><script type="text/javascript" src="https://elsmeusdocuments.gencat.cat/assets/env/env.js"></script><script type="text/javascript" src="https://lesmevesdades.gencat.cat/assets/env/env.js"></script>
+			<div class="EVO-boto-fuga">
+        <link href="https://web.gencat.cat/web/resources/fwkResponsives/common/css/botoFuga.css" rel="stylesheet" type="text/css">
+        <script src="https://web.gencat.cat/web/resources/fwkResponsives/common/js/botoFuga.js" type="text/javascript"></script>
+        <!-- Botó -->
+        <button class="sortir-rapid hide">Sortir ràpid</button>
+        <!-- Modal -->
+        <div class="boto-fuga">
+            <div class="modal fade modalFugida" tabindex="-1" role="dialog" aria-labelledby="modalFugidaLabel">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Tancar modal." title="Tancar modal.">
+                                <span aria-hidden="true">×</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <p id="botoFugaModalTitle" class="modal-title">Per poder navegar amb més tranquil·litat pels continguts d'aquesta web, tingues en compte el següent:</p>
+                            <div class="modal-body-content">
+                                <div class="modal-body-content-detail">
+                                <div class="sim-btn"><span>Sortir ràpid</span></div>
+                                    <p id="botoFuga1">1. Disposes del botó <strong>Surt ràpid</strong> per sortir immediatament.</p>
+                                </div>
+                                <div class="modal-body-content-detail">
+                                    <img src="https://web.gencat.cat/web/resources/fwkResponsive/fpca_capcalera/img/imatge-huida-r-pida-02.svg" alt="pdf">
+                                    <p id="botoFuga2">2. Quan obris un PDF, <strong>simplement visualitza'l</strong>, sense desar-lo</p>
+                                </div>
+                                <div class="modal-body-content-detail">
+                                    <img src="https://web.gencat.cat/web/resources/fwkResponsive/fpca_capcalera/img/imatge-huida-r-pida-03.svg" alt="esborrar-historial">
+                                    <p id="botoFuga3">3. Assegura't <strong>d'esborrar el teu historial de navegació</strong> abans de sortir.</p>
+                                </div>
+                                <div class="modal-body-content-detail">
+                                    <img src="https://web.gencat.cat/web/resources/fwkResponsive/fpca_capcalera/img/imatge-huida-r-pida-04.svg" alt="mode-incognit">
+                                    <p id="botoFuga4">4. Fes servir la <strong>navegació privada o d'incògnit</strong>.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-default" data-dismiss="modal">D'acord</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<!-- Auditoria Accesibilidad - Enlace para saltar al contenido principal de la pagina sin pasar por la cabecera y subcabecera -->
+			<a class="hidden-xs skip-main" href="#main" tabindex="1" role="region">
+				Saltar al contingut principal
+</a>
+
+			<div class="contenidor unfixed">
+				<header class="NG-header">
+					<!--googleoff: index -->
+<!--googleoff: snippet-->
+
+	<!-- <div class="container">  -->
+		<div id="hTContainer"><div class="fpca_capcalera_area-privada">
+            <div class="NG-header__container NG-header__container--relative">
+                <div class="NG-main" id="geco-capcalera">
+                    <div class="NG-container">
+                        <div class="NG-row-flex NG-row-flex--space-between">
+                            <div class="NG-col NG--pd15 NG-row-flex--vertical-lg NG-row-flex-row-reverse">
+                                <div class="NG-header__logo">
+                                    <h1><a href="https://web.gencat.cat/" target="_blank">
+                                        <span class="sr-only">. Obre en una nova finestra.</span><img class="NG-header__image" src="https://web.gencat.cat/web/resources/fwkResponsive/fpca_capcalera_area-privada/img/gencat-nuevo-completo-w.svg" alt="Logotip de la Generalitat">
+                                    </a></h1>
+                                    <div class="areaPrivada">
+                                        <a href="https://ovt.gencat.cat/carpetaciutadana360/mfe-main-app/#/inici" aria-label="Àrea privada ciutadana">Àrea privada ciutadana</a>
+                                    </div>
+                                </div>
+                                <a class="NG-header__icon js-burguer-menu" role="button" tabindex="0">
+                                    <span class="sr-only">Menú</span>
+                                </a>
+                                <a class="icon_user_mobile header-username" href="#">
+                                    <img alt="" src="https://web.gencat.cat/web/resources/fwkResponsive/fpca_capcalera_area-privada/img/icona-24-blanc-user.svg">
+                                    <img class="icon_user_mobile_arrow" src="https://web.gencat.cat/web/resources/fwkResponsive/fpca_capcalera_area-privada/img/icona-16-blanc-chevron-up.svg" data-opened_alt="Plegar panell d'usuari connectat" data-closed_alt="Desplegar panell d'usuari connectat" alt="Desplegar panell d'usuari connectat">
+                                    <span class="sr-only">Imatge d'usuari</span>
+                                </a>
+                            </div>
+                            <div class="NG-col">
+                                <div class="NG-navbar__menu-desktop--wrapper hide-mobile">
+                                    <ul class="NG-navbar__menu NG-navbar__menu--invert js-NG-navbar__menu show-lg suport">
+                                        <li class="NG-navbar__list NG-navbar__list--vertical-sm">
+                                            <a class="NG-navbar__link" aria-label="Suport" href="https://web.gencat.cat/ca/tramits/suport-tramitacio/index.html" role="button" aria-expanded="false" target="_blank">
+                                                <span>Suport</span>
+                                            </a>
+                                        </li>
+                                        <li class="NG-navbar__list NG-navbar__list--vertical-sm">
+                                            <a class="NG-navbar__link js-NG-menu-idioma" id="rotate_icon" role="button" aria-expanded="false" aria-labelledby="idiomaSeleccionat idioma" tabindex="0">
+                                                <span class="NG-idioma sr-only" id="idiomaSeleccionat">Idioma seleccionat:</span>
+                                                <span class="NG-nom-idioma-letter">
+                                                    <span class="js-NG-idioma-text notranslate">ca</span>
+
+                                                    <span class="sr-only" id="idioma" lang="ca">Català</span>
+                                                    <img class="NG-navbar__down" src="https://web.gencat.cat/system/modules/cat.gencat.wcmResponsive.formatters.capcalera/resources/fpca_capcalera_area-privada/img/chevron-down-small-w.svg" data-opened_alt="Idioma de la pàgina: plegar opcions." data-closed_alt="Idioma de la pàgina: desplegar opcions." alt="Idioma de la pàgina: desplegar opcions.">
+                                                </span>
+                                                <img class="NG-rotate-image NG-navbar__image NG-navbar__image--float-right" src="https://web.gencat.cat/system/modules/cat.gencat.wcmResponsive.formatters.capcalera/resources/fpca_capcalera_area-privada/img/icona-24-dark-chevron-small-down.svg" data-opened_alt="Idioma de la pàgina: plegar opcions." data-closed_alt="Idioma de la pàgina: desplegar opcions." alt="Idioma de la pàgina: desplegar opcions.">
+                                            </a>
+
+                                            <ul class="NG-navbar__list-language idioma" id="geco-idioma" aria-label="Idioma de la pàgina.">
+                                                <li class="NG-block__content">
+                                                        <a id="apt_idioma_es" title="Castellano" data-idioma="Castellano" lang="es" role="button" tabindex="0" class="js-NG-idioma-item js-NG-idioma-tooltip NG-block__content_label notranslate enllacIdioma">Castellano</a>
+                                                    </li>
+                                                <li class="NG-block__content">
+                                                        <a id="apt_idioma_en" title="English" data-idioma="English" lang="en" role="button" tabindex="0" class="js-NG-idioma-item js-NG-idioma-tooltip NG-block__content_label notranslate enllacIdioma">English</a>
+                                                    </li>
+                                                <li class="NG-block__content">
+                                                        <a id="apt_idioma_oc" title="Occitan aranés" data-idioma="Occitan aranés" lang="oc" role="button" tabindex="0" class="js-NG-idioma-item js-NG-idioma-tooltip NG-block__content_label notranslate enllacIdioma">Occitan aranés</a>
+                                                    </li>
+                                                </ul>
+                                        </li>
+                                        <li class="NG-navbar__list NG-navbar__list--vertical-sm username">
+                                            <a href="#" class="NG-navbar__link header-username" role="button" aria-expanded="false">
+                                                <div class="imgAndText">
+                                                    <img src="https://web.gencat.cat/web/resources/fwkResponsive/fpca_capcalera_area-privada/img/icon-ui-la-meva-carpeta-w.svg" alt="">
+                                                    <div class="wrapper_imgAndText">
+                                                        <span id="apt_username"></span>
+                                                        <img class="NG-navbar__down" src="https://web.gencat.cat/system/modules/cat.gencat.wcmResponsive.formatters.capcalera/resources/fpca_capcalera_area-privada/img/chevron-down-small-w.svg" data-opened_alt="Plegar panell d'usuari connectat" data-closed_alt="Desplegar panell d'usuari connectat" alt="Desplegar panell d'usuari connectat">
+                                                    </div>
+                                                </div>
+                                            </a>
+                                            <div class="list-group user-options-container non-visible">
+                                                <ul class="list-group user-options">
+                                                    <li class="list-group-item">
+                                                        <span>
+                                                            <div class="info">
+																<p id="apt_item1_username" class="list-group-item__nom"></p>
+                                                            	<p class="list-group-item__carrec">Ciutadania</p>
+															</div>
+                                                        </span>
+                                                    </li>
+                                                    <li class="list-group-item with-button">
+                                                        <a href="#" id="apt_item2_url" role="button" aria-expanded="false">
+                                                            <div class="info">
+                                                                <span class="list-group-item__nom">Àrea privada de Canal Empresa</span>
+                                                                <p class="list-group-item__carrec">Empresaris, Autònoms i Intermediaris</p>
+                                                            </div>
+                                                            <div class="wrapper_arrow">
+																<img alt="Accés a l'Àrea privada de Canal Empresa" src="https://web.gencat.cat/web/resources/fwkResponsive/fpca_capcalera_area-privada/img/icona-24-negre-desplegable.svg">
+                                                            </div>
+                                                        </a>
+                                                    </li>   
+
+                                                </ul>
+                                            </div>
+                                        </li>
+                                        <li class="NG-navbar__list NG-navbar__list--vertical-sm no-after">
+                                            <a data-toggle="modal" aria-label="Tancar sessió" href="#mi_modal" class="NG-navbar__link" id="geco-logout" role="button" aria-expanded="false">
+                                                <div class="imgAndText">
+                                                     <img class="icon_close_sesion" title="Tancar sessió" src="https://web.gencat.cat/web/resources/fwkResponsive/fpca_capcalera_area-privada/img/icon-ui-search.svg" alt="Tanca la sessió. Redireccio a la pàgina d'inici.">
+                                                </div>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="NG-departament">
+                    <div class="NG-departament__background-wrapper NG-departament__background-wrapper--top">
+                        <div class="NG-container">
+                            <div class="NG-row-flex NG-row-flex--align-center-md">
+                                <div class="NG-col NG--pd15">
+                                    <h2 class="NG-departament__title">
+                                        <a href="https://ovt.gencat.cat/carpetaciutadana360/mfe-main-app/#/inici" aria-label="Àrea privada ciutadana">Àrea privada ciutadana</a>
+                                    </h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="NG-header__wrapper" id="geco-subcapcalera">
+                    <nav class="NG-navbar mobile-main-dropdown">
+                        <div class="NG-container">
+                            <div class="NG-row-flex NG-row-flex--vertical-md">
+                                <ul class="NG-navbar__menu js-navbar__menu">
+                                    <li class="NG-navbar__list NG-navbar__list--white">
+									<a id="apt_ini" class="NG-navbar__link NG-navbar__link--noborder" title="Menú&nbsp;Inici" href="https://ovt.gencat.cat/carpetaciutadana360/mfe-main-app/#/inici">
+										Inici</a>
+								</li>
+					<li class="NG-navbar__list NG-navbar__list--white">
+									<a id="apt_tig" class="NG-navbar__link NG-navbar__link--noborder" title="Menú&nbsp;Tràmits i gestions" href="https://ovt.gencat.cat/carpetaciutadana360/mfe-main-app/#/gestions">
+										Tràmits i gestions</a>
+								</li>
+					<li class="NG-navbar__list NG-navbar__list--white">
+									<a id="apt_did" class="NG-navbar__link NG-navbar__link--noborder" title="Menú&nbsp;Dades i documents" href="https://areaprivada.ovt.gencat.cat/inici">
+										Dades i documents</a>
+								</li>
+					<li class="NG-navbar__list NG-navbar__list--white">
+									<a id="apt_cpr" class="NG-navbar__link NG-navbar__link--noborder" title="Menú&nbsp;Cites" href="https://ovt.gencat.cat/carpetaciutadana360/mfe-main-app/#/cites-previes">
+										Cites</a>
+								</li>
+					<li class="NG-navbar__list NG-navbar__list--white">
+									<a id="apt_not" class="NG-navbar__link NG-navbar__link--noborder" title="Menú&nbsp;Notificacions" href="https://ovt.gencat.cat/carpetaciutadana360/mfe-main-app/#/notificacions">
+										Notificacions</a>
+								</li>
+					<li class="NG-navbar__list NG-navbar__list--white">
+									<a id="apt_sub" class="NG-navbar__link NG-navbar__link--noborder" title="Menú&nbsp;Subscripcions" href="https://ovt.gencat.cat/carpetaciutadana360/mfe-main-app/#/registre-consentiments">
+										Subscripcions</a>
+								</li>
+					<li class="NG-navbar__list NG-navbar__list--white active">
+									<a id="apt_bdc" class="NG-navbar__link NG-navbar__link--noborder" title="Menú&nbsp;Bústia de contacte" href="https://ovt.gencat.cat/carpetaciutadana360/mfe-fc-app/gsitfc/AppJava/conqxs/conqxsOVT.do">
+										Bústia de contacte</a>
+								</li>
+					</ul>
+                                <div class="NG-navbar__menu-mobile--wrapper"></div>
+                            </div>
+                        </div>
+                    </nav>
+                    <nav class="list-group user-options-container non-visible mobile">
+                        <ul class="list-group user-options">
+                            <li class="list-group-item">
+                                <span>
+                                    <div class="info">
+										<p id="apt_item1_username_mobile" class="list-group-item__nom"></p>
+										<p class="list-group-item__carrec">Ciutadania</p>
+									</div>
+                                </span>
+                            </li>
+                            <li class="list-group-item wrapper_tancar_sessio">
+                                <a data-toggle="modal" href="#mi_modal" class="tancar_sessio" id="tancar_sessio" role="button" aria-expanded="false"><img alt="" src="https://web.gencat.cat/web/resources/fwkResponsive/fpca_capcalera_area-privada/img/shape.svg">Tancar la sessió</a>
+                            </li>
+                            <li class="list-group-item with-button">
+                                <a href="#" id="apt_item2_url_mobile" role="button" aria-expanded="false">
+                                    <div class="info">
+                                        <p class="list-group-item__nom">Àrea privada de Canal Empresa</p>
+                                        <p class="list-group-item__carrec">Empresaris, Autònoms i Intermediaris</p>
+                                    </div>
+                                    <div class="wrapper_arrow">
+										<img alt="Accés a l'Àrea privada de Canal Empresa" src="https://web.gencat.cat/web/resources/fwkResponsive/fpca_capcalera_area-privada/img/icona-24-negre-desplegable.svg">
+                                    </div>
+                                </a>
+                            </li>   
+
+                        </ul>
+                    </nav>
+                    </div>
+            </div>
+
+            <div class="secondary-header">
+                <div class="NG-submain">
+                    <div class="NG-container">
+                        <div class="NG-row-flex">
+                            <div class="NG-col NG--pd15 NG-row-flex--vertical-lg NG-row-flex-row-reverse">
+                                <div class="NG-header__logo">
+                                    <a href="https://web.gencat.cat/" target="_blank" tabindex="-1">
+                                    <span class="sr-only">. Obre en una nova finestra.</span><img class="NG-header__image" src="https://web.gencat.cat/web/resources/fwkResponsive/fpca_capcalera_area-privada/img/gencat-nuevo-completo-w.svg" alt="Logotip de la Generalitat">
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="mi_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" title="Tanca la finestra">
+                            <span aria-hidden="true"><img alt="" src="https://web.gencat.cat/web/resources/fwkResponsive/fpca_capcalera_area-privada/img/icona-24-vermell-close.svg"></span><span class="sr-only">Cerrar</span>
+                        </button>
+                        <div role="heading" class="modal-title" id="myModalLabel">Tanca la sessió</div>
+                    </div>
+                    <div class="modal-body">
+                        <p id="tancatSessioCapcalera">Estàs a punt de tancar la teva sessió a l'Àrea Privada de Gencat. Segur que vols continuar?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default tancar" data-dismiss="modal">Cancel·la</button>
+                        <a href="https://ovt.gencat.cat/carpetaciutadana360" class="btn btn-default tancar-sesio no-content">Tanca la sessió</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div><!-- </div> -->
+<!--googleon: snippet -->
+<!--googleon: index--></header>
+			</div>
+			<div class="border-start bgGrey">
+				<!--googleoff: index -->
+<!--googleoff: snippet-->
+	<div id="impacteContainer">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+		
+		
+		
+
+		
+		
+
+		
+		
+		
+		
+
+		<div class="fpca_subcapcalera_area-privada">
+				<div class="NG-menu">
+				<div class="NG-container">
+
+					
+					
+					
+					
+					
+					
+					
+						
+
+						
+						
+							
+							
+					
+						
+
+						
+						
+							
+							
+					
+						
+
+						
+						
+							
+							
+					
+
+					
+						<ul class="NG__breadcrumb" id="apt_breadcrumb"><app-breadcrumb _nghost-ng-c1792871938="" ng-version="16.2.12" ng-server-context="other"><li _ngcontent-ng-c1792871938="" class="NG__breadcrumb_item"><a _ngcontent-ng-c1792871938="" class="NG__breadcrumb__item_link" href="https://ovt.gencat.cat/carpetaciutadana360"><span _ngcontent-ng-c1792871938="" class="NG__breadcrumb__item_link_span NG__breadcrumb__item_link_span--overflow cursor-pointer"> Inici </span></a></li><li _ngcontent-ng-c1792871938="" class="NG__breadcrumb_item"><!----> Dades i documents<!----></li><!----></app-breadcrumb></ul>
+					
+
+					<div class="apt_subheader"><app-feature-header _nghost-ng-c4194904777="" ng-version="16.2.12" ng-server-context="other"><div _ngcontent-ng-c4194904777="" class="feature-header-container"><div _ngcontent-ng-c4194904777="" class="feature-header-container_description"><!----><h2 _ngcontent-ng-c4194904777="" class="h3"></h2><p _ngcontent-ng-c4194904777=""></p></div><div _ngcontent-ng-c4194904777="" class="feature-header-container_image"><img _ngcontent-ng-c4194904777="" class="feature-header-container_image_content" src="" alt=""></div></div></app-feature-header></div>
+					
+			</div>
+		</div>	
+	</div>
+	
+</div><!--googleon: snippet -->
+<!--googleon: index--></div>
+			<main id="main" class="webgencat">
+				<div class="literalesAccesibilidad">
+					<input type="hidden" class="literalTipoArchivo" value="Tipus de fitxer">
+					<input type="hidden" class="literalPesoArchivo" value="Pes del fitxer">
+				<!--
+					<input type="hidden" class="literalEnlaceExtern" value="???publicacio.autor???"/>
+				-->	
+				</div>
+
+				<section class="padding-xs padding-sm padding-md colorSectionOdd">
+								<article class="container fullcontainer-xs">
+									<div class="row">
+										<div>
+													<div id="center_1R"><app-root ng-version="16.2.12" ng-server-context="other"><ng-gencat-progress-spinner><!----></ng-gencat-progress-spinner><!----></app-root></div></div>
+											</div>
+								</article>
+							</section>
+						</main>
+			<div class="container visible-xs oculta_xarxes">
+				<div class="row padding-xs">
+					<div class="footer-xarxes">
+
+					</div>
+				</div>
+			</div>
+
+			<!--googleoff: index -->
+<!--googleoff: snippet-->
+
+	<div id="fAvisLegal"><div id="surveyContent"></div><div id="chatbotContainer"></div><div class="fpca_peu_area_privada" id="geco-peu">
+					<footer class="in-faldo">
+						
+
+<div><div class="fpca_peu_area-privada-logos" id="geco-faldo">
+			<div>
+				<section class="container fullcontainer-xs">		
+						<div class="row">
+							<div>
+								<div id="center_2R"></div>
+							</div>
+						</div>
+						<div class="fpca_peu_area-privada-logos bg-grey">
+							<div class="row row-fpca_peu_area-privada-logos">
+								<div class="wrapper_fpca_peu_area-privada-logos">
+										<ul class="wrapper">
+											<li>
+											<a href="https://fonseuropeus.gencat.cat/ca/feder/" aria-label="Unió Europea. Fons Europeu de Desenvolupament Regional. Finançat com a resposta a la pandèmia de COVID-19" target="_blank">
+												<img src="https://web.gencat.cat/web/.content/area-privada/ciutadana/logos/Emblema_de_la_Union_Europea_1x_ca.svg" alt="Unió Europea. Fons Europeu de Desenvolupament Regional. Finançat com a resposta a la pandèmia de COVID-19">
+												</a>
+											</li>
+										<li>
+											<a href="https://fonseuropeus.gencat.cat/ca/next-generation-catalunya/" aria-label="Fons Europeus Next Generation Catalunya" target="_blank">
+												<img src="https://web.gencat.cat/web/.content/area-privada/ciutadana/logos/next-generation_1x.svg" alt="Fons Europeus Next Generation Catalunya">
+												</a>
+											</li>
+										<li>
+											<a href="https://web.gencat.cat" aria-label="Generalitat de Catalunya" target="_blank">
+												<img src="https://web.gencat.cat/web/.content/area-privada/ciutadana/logos/Gencat_completo_B_1x.svg" alt="Generalitat de Catalunya">
+												</a>
+											</li>
+										</ul>
+								</div>
+							</div>
+						</div>
+				</section>
+			</div>
+		</div>
+	</div>
+
+<div></div>
+
+<div></div>
+
+<script type="text/javascript" src="https://web.gencat.cat/system/modules/cat.vass.wcmResponsive.template.common/resources/common/js/accessibility.js"></script><div class="footer-bottom">
+							<div class="NG-container">
+								<div class="footer-bottom__wrapper">
+									<div class="NG-row-flex NG-row-flex--space-center NG-row-flex--vertical-reverse-xs">
+										<div class="NG-col">
+											<a class="footer-bottom__logo-link" target="_self" title="www.gencat.cat" href="https://www.gencat.cat">
+												<img class="footer-bottom__logo" src="https://web.gencat.cat/web/resources/fwkResponsives/common/img/logo_generalitat_blanc.svg" alt="www.gencat.cat" srcset="">
+											</a>
+											<ul class="footer-bottom__list">
+												<li class="footer-bottom__list-item">
+															<a class="footer-bottom__list-link" title="Avís legal" target="_self" href="https://web.gencat.cat/ca/tramits/area-privada/avis-legal/condicions-us/">
+																	Condicions d'ús</a>
+														</li>
+
+													<li class="footer-bottom__list-item">
+															<a class="footer-bottom__list-link" title="Política de privacitat" target="_self" href="https://web.gencat.cat/ca/tramits/area-privada/avis-legal/politica-privacitat/">
+																	Política de privacitat</a>
+														</li>
+
+													<li class="footer-bottom__list-item">
+															<a class="footer-bottom__list-link" title="Politica de galetes" target="_self" href="https://web.gencat.cat/ca/tramits/area-privada/politica-de-galetes/">
+																	Politica de galetes</a>
+														</li>
+
+													<li class="footer-bottom__list-item">
+															<a class="footer-bottom__list-link" title="Accessibilitat" target="_self" href="https://web.gencat.cat/ca/tramits/area-privada/declaracio-accessibilitat/">
+																	Accessibilitat</a>
+														</li>
+
+													</ul>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</footer>
+					
+					<div class="NG-container">
+						<div class="NG-row-flex NG-goToTop__wrapper">
+							<button class="NG-goToTop js-NG-goToTop" style="display: block;">
+								<img class="NG-goToTop_image" alt="Torna amunt" src="https://web.gencat.cat/web/resources/fwkResponsive/fpca_peu/img/chevron-up-w.svg">
+							</button>
+						</div>
+					</div>
+				</div>
+				</div><!--googleon: snippet -->
+<!--googleon: index-->
+<!-- GKPSTX06-->
+<script type="text/javascript" src="https://web.gencat.cat/system/modules/cat.vass.wcmResponsive.template.common/resources/common/js/accessibility.js"></script>
+    <script src="/polyfills.js" type="module"></script>
+    <script src="/main.js" type="module"></script>
+  
+	
+
+
+</body></html>?�FE��      i^�i^�H�^�i^�   Q    O^partitionKey=%28https%2Cgencat.cat%29,:https://areaprivada.ovt.gencat.cat/login necko:classified 1 peer-ip-address 83.247.135.227 peer-port 443 strongly-framed 1 security-info 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 request-method GET response-head HTTP/1.1 200 OK
+x-powered-by: Express
+content-type: text/html; charset=utf-8
+content-length: 42623
+etag: W/"a67f-1MJh3Jpfm+/IqkQewdg5FvSI1uY"
+date: Thu, 06 Nov 2025 08:39:47 GMT
+ original-response-headers x-powered-by: Express
+content-type: text/html; charset=utf-8
+content-length: 42623
+etag: W/"a67f-1MJh3Jpfm+/IqkQewdg5FvSI1uY"
+date: Thu, 06 Nov 2025 08:39:47 GMT
+keep-alive: timeout=5
+ ctid 1 uncompressed-len 0 net-response-time-onstart 48 net-response-time-onstop 101   �
