@@ -1,6 +1,5 @@
 """
 Script de automatización Selenium para validar el acceso frontal EMD.
-
 Este script:
 1. Carga configuración desde .env y variables de entorno.
 2. Abre un navegador Firefox con perfil preconfigurado.
@@ -8,11 +7,9 @@ Este script:
 4. Detecta si la alerta es un falso positivo o una alerta real.
 5. Guarda capturas, logs y estado de la ejecución en archivos.
 6. NO envía correos (la notificación se gestiona en Jenkins).
-
 Autor: Rodrigo Simoes
 Proyecto: GSIT_Alertas
 """
-
 import os
 import sys
 import time
@@ -35,8 +32,6 @@ if os.path.exists(ENV_PATH):
     load_dotenv(dotenv_path=ENV_PATH)
 
 WORKSPACE = os.getenv("WORKSPACE", os.getcwd())
-EMAIL_USER = os.getenv("EMAIL_USER")
-EMAIL_PASS = os.getenv("EMAIL_PASS")
 ACCES_FRONTAL_EMD_URL = os.getenv("ACCES_FRONTAL_EMD_URL")
 DEFAULT_WAIT = int(os.getenv("DEFAULT_WAIT", "15"))
 ALERT_ID = os.getenv("ALERT_ID", datetime.now().strftime("%Y%m%d_%H%M%S"))
@@ -52,7 +47,7 @@ os.makedirs(screenshots_dir, exist_ok=True)
 os.makedirs(logs_dir, exist_ok=True)
 
 # =========================
-# Logging
+# Logging y utilidades
 # =========================
 def log(level: str, message: str) -> None:
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -96,7 +91,6 @@ def setup_driver() -> webdriver.Firefox:
         write_status("error")
         save_result("error", f"Perfil Selenium no encontrado en: {profile_path}")
         sys.exit(2)
-
     options = Options()
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
@@ -104,7 +98,6 @@ def setup_driver() -> webdriver.Firefox:
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
     options.profile = webdriver.FirefoxProfile(profile_path)
-
     service = Service(GeckoDriverManager().install())
     driver = webdriver.Firefox(service=service, options=options)
     driver.set_page_load_timeout(60)
@@ -150,7 +143,6 @@ def click_with_wait(driver, by, selector, description, iframe=False, shadow=Fals
             WebDriverWait(driver, 30).until(
                 EC.visibility_of_element_located((by, selector))
             )
-
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
         time.sleep(1)
         try:
@@ -160,7 +152,6 @@ def click_with_wait(driver, by, selector, description, iframe=False, shadow=Fals
             log("warn", f"Clic normal falló, usando JS para: {description}")
             driver.execute_script("arguments[0].click();", elem)
             log("info", f"✓ Clic con JS: {description}")
-
         if iframe:
             driver.switch_to.default_content()
         return True
@@ -169,6 +160,50 @@ def click_with_wait(driver, by, selector, description, iframe=False, shadow=Fals
         screenshot = save_screenshot(driver, f"error_{description.replace(' ', '_')}")
         write_status("alarma_confirmada")
         save_result("alarma_confirmada", f"No se pudo interactuar: {description}", [os.path.basename(screenshot)])
+        return False
+
+def click_btn_cert(driver) -> bool:
+    """
+    Intenta hacer clic en el botón de certificado digital, buscando en DOM principal e iframes.
+    """
+    try:
+        wait_for_loaders(driver)
+        try:
+            elem = WebDriverWait(driver, DEFAULT_WAIT).until(
+                EC.presence_of_element_located((By.ID, "btnContinuaCertCaptcha"))
+            )
+            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
+            time.sleep(1)
+            driver.execute_script("arguments[0].click();", elem)
+            log("info", "Certificado clicado (DOM principal).")
+            return True
+        except:
+            log("warn", "Buscando certificado en iframes...")
+
+        for iframe in driver.find_elements(By.TAG_NAME, "iframe"):
+            driver.switch_to.frame(iframe)
+            try:
+                elem = WebDriverWait(driver, 5).until(
+                    EC.presence_of_element_located((By.ID, "btnContinuaCertCaptcha"))
+                )
+                driver.execute_script("arguments[0].click();", elem)
+                log("info", "Certificado clicado en iframe.")
+                driver.switch_to.default_content()
+                return True
+            except:
+                driver.switch_to.default_content()
+
+        log("error", "No se encontró el botón de certificado digital.")
+        screenshot = save_screenshot(driver, "cert_fallo")
+        write_status("alarma_confirmada")
+        save_result("alarma_confirmada", "No se pudo seleccionar certificado digital", [os.path.basename(screenshot)])
+        return False
+
+    except Exception as e:
+        log("error", f"Error certificado: {e}")
+        screenshot = save_screenshot(driver, "error_cert")
+        write_status("alarma_confirmada")
+        save_result("alarma_confirmada", f"Error certificado: {e}", [os.path.basename(screenshot)])
         return False
 
 # =========================
@@ -182,6 +217,10 @@ def run_automation():
         WebDriverWait(driver, 30).until(lambda d: d.execute_script("return document.readyState") == "complete")
 
         if not click_with_wait(driver, None, None, "Botón 'Soc un ciutadà/ana'", shadow=True):
+            driver.quit()
+            return False
+
+        if not click_btn_cert(driver):
             driver.quit()
             return False
 
