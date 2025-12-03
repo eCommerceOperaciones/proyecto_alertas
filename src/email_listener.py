@@ -153,4 +153,6 @@ def check_email():
     print(json.dumps(alerts_found))
 
 if __name__ == "__main__":
-    check_email()
+    alerts = check_email()
+    with open("listener_output.json", "w", encoding="utf-8") as f:
+        json.dump(alerts, f, indent=2, ensure_ascii=False)
