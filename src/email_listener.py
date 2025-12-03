@@ -132,7 +132,6 @@ def check_email():
                 body = parse_email_body(email_message)
 
                 alert_name, script_to_run, alert_type, alert_id = detect_alert(from_email, subject, body)
-                server.add_flags(msgid, ['\\Seen'])
 
                 if script_to_run and alert_id:
                     alert_data = {
@@ -145,10 +144,12 @@ def check_email():
                         "email_subject": subject,
                         "email_body": body
                     }
+                    # Solo marcar como leído si es alerta válida
+                    server.add_flags(msgid, ['\\Seen'])
                     print(json.dumps(alert_data))
                     return
 
-            # Si no hay alertas
+            # Si no hay alertas válidas
             print(json.dumps({"alert_detected": False}))
     except Exception as e:
         logging.error(f"Error en check_email: {e}")
