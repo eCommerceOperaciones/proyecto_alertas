@@ -1,0 +1,136 @@
+pipeline {
+    agent { label 'main' }
+    parameters {
+        string(name: 'ALERT_NAME', defaultValue: '', description: 'Nombre de la alerta')
+        string(name: 'ALERT_TYPE', defaultValue: '', description: 'Tipo de alerta')
+        string(name: 'ALERT_ID', defaultValue: '', description: 'ID de la alerta')
+        string(name: 'SCRIPT_NAME', defaultValue: '', description: 'Script asociado')
+        text(name: 'EMAIL_BODY', defaultValue: '', description: 'Cuerpo del correo original')
+    }
+    stages {
+        stage('Copiar artefactos de ejecución') {
+            steps {
+                copyArtifacts(
+                    projectName: 'GSIT_Alerts/03_Ejecutar_Script',
+                    filter: '**/status.txt, **/result.json, **/*.png, **/*.log, **/*.txt'
+                )
+            }
+        }
+        stage('Leer result.json') {
+            steps {
+                script {
+                    def resultData = readJSON file: 'result.json'
+                    env.STATUS = resultData.status
+                    env.ERROR_MESSAGE = resultData.error_message ?: ""
+                    env.SCREENSHOTS = resultData.screenshots ? resultData.screenshots.join(" ") : ""
+                    env.LOGS = resultData.logs ? resultData.logs.join(" ") : ""
+                }
+            }
+        }
+        stage('Preparar entorno Python') {
+            steps {
+                sh """
+                    python3 -m venv '${WORKSPACE}/venv'
+                    '${WORKSPACE}/venv/bin/pip' install --upgrade pip
+                    '${WORKSPACE}/venv/bin/pip' install -r requirements.txt
+                """
+            }
+        }
+        stage('Generar cuerpo del correo con plantilla') {
+            steps {
+                script {
+                    if (env.STATUS == 'error') {
+                        sh """
+                            '${WORKSPACE}/venv/bin/python' -c "
+from utils.email_generator import generate_error_email
+html = generate_error_email(
+    '${params.SCRIPT_NAME}',
+    '${params.ALERT_NAME}',
+    '${params.ALERT_TYPE}',
+    '${params.ALERT_ID}',
+    '${env.ERROR_MESSAGE}',
+    0,
+    1
+)
+with open('email_body.html', 'w', encoding='utf-8') as f:
+    f.write(html)
+"
+                        """
+                    } else if (env.STATUS == 'falso_positivo') {
+                        sh """
+                            '${WORKSPACE}/venv/bin/python' -c "
+from utils.email_generator import generate_false_positive_email
+html = generate_false_positive_email(
+    '${params.SCRIPT_NAME}',
+    '${params.ALERT_NAME}',
+    '${params.ALERT_TYPE}',
+    '${params.ALERT_ID}',
+    '04_Notifica_Email'
+)
+with open('email_body.html', 'w', encoding='utf-8') as f:
+    f.write(html)
+"
+                        """
+                    } else if (env.STATUS == 'alarma_confirmada') {
+                        sh """
+                            '${WORKSPACE}/venv/bin/python' -c "
+from utils.email_generator import generate_alert_email
+html, fields = generate_alert_email(
+    '${params.SCRIPT_NAME}',
+    '''${params.EMAIL_BODY}''',
+    '${params.ALERT_TYPE}',
+    '${params.ALERT_ID}'
+)
+with open('email_body.html', 'w', encoding='utf-8') as f:
+    f.write(html)
+with open('excel_fields.json', 'w', encoding='utf-8') as f:
+    import json; json.dump(fields, f, ensure_ascii=False, indent=2)
+"
+                        """
+                    } else {
+                        echo "⚠ Estado desconocido: ${env.STATUS}. No se envía correo."
+                    }
+                }
+            }
+        }
+        stage('Enviar correo') {
+            steps {
+                script {
+                    def screenshotsPattern = env.SCREENSHOTS
+                    def logsPattern = env.LOGS
+                    if (env.STATUS == 'error') {
+                        emailext(
+                            subject: "❌ Error en ejecución - ${params.ALERT_NAME} (${params.ALERT_TYPE})",
+                            body: readFile('email_body.html'),
+                            mimeType: 'text/html',
+                            to: "rpinheiro@viewnext.com",
+                            attachmentsPattern: "${screenshotsPattern} ${logsPattern}"
+                        )
+                    } else if (env.STATUS == 'falso_positivo') {
+                        emailext(
+                            subject: "ℹ Falso positivo confirmado - ${params.ALERT_NAME} (${params.ALERT_TYPE})",
+                            body: readFile('email_body.html'),
+                            mimeType: 'text/html',
+                            to: "rpinheiro@viewnext.com",
+                            attachmentsPattern: "${screenshotsPattern}"
+                        )
+                    } else if (env.STATUS == 'alarma_confirmada') {
+                        emailext(
+                            subject: "🚨 Alerta real - ${params.ALERT_NAME} (${params.ALERT_TYPE})",
+                            body: readFile('email_body.html'),
+                            mimeType: 'text/html',
+                            to: "ecommerceoperaciones01@gmail.com",
+                            attachmentsPattern: "${screenshotsPattern} ${logsPattern}"
+                        )
+                    }
+                }
+            }
+        }
+    }
+    post {
+        success {
+            echo "✅ Notificación enviada correctamente."
+            archiveArtifacts artifacts: 'email_body.html, excel_fields.json', allowEmptyArchive: true
+        }
+    }
+}

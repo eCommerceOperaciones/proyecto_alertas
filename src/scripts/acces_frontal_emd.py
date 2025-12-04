@@ -98,7 +98,7 @@ def setup_driver() -> webdriver.Firefox:
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
     options.profile = webdriver.FirefoxProfile(profile_path)
-    service = Service(GeckoDriverManager().install())
+    service = Service("bin/geckodriver")
     driver = webdriver.Firefox(service=service, options=options)
     driver.set_page_load_timeout(60)
     return driver
