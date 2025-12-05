@@ -19,19 +19,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Enlazamos python3 → python (por compatibilidad)
 RUN ln -s /usr/bin/python3 /usr/bin/python
 
-# Instalamos geckodriver (última versión)
-RUN GECKO_LATEST=$(wget -qO- https://api.github.com/repos/mozilla/geckodriver/releases/latest \
-    | grep tag_name | cut -d '"' -f 4 | cut -c2-) \
-    && wget -O /tmp/geckodriver.tar.gz \
-    https://github.com/mozilla/geckodriver/releases/download/v${GECKO_LATEST}/geckodriver-v${GECKO_LATEST}-linux64.tar.gz \
+# Instalamos geckodriver 0.34.0 (versión fija, evita problemas con API de GitHub)
+RUN wget -O /tmp/geckodriver.tar.gz \
+    https://github.com/mozilla/geckodriver/releases/download/v0.34.0/geckodriver-v0.34.0-linux64.tar.gz \
     && tar -xzf /tmp/geckodriver.tar.gz -C /usr/local/bin \
     && chmod +x /usr/local/bin/geckodriver \
-    && rm /tmp/geckodriver.tar.gz
+    && rm /tmp/geckodriver.tar.gz \
+    && geckodriver --version
 
-# ←←← LA LÍNEA MÁGICA QUE LO ARREGLA TODO CON PERFILES + CERTIFICADOS EN DOCKER ←←←
+# LA LÍNEA MÁGICA QUE LO ARREGLA TODO CON PERFILES + CERTIFICADOS EN DOCKER
 ENV MOZ_FORCE_DISABLE_E10S=1
 
-# Wrapper para ejecutar comandos con Xvfb automáticamente (opcional, ya no lo necesitas pero está bien tenerlo)
+# FORZAR PREFS COMPATIBLES PARA PERFILES
+RUN mkdir -p /usr/lib/firefox/browser/defaults/preferences && \
+    echo 'pref("browser.tabs.remote.autostart", false);' > /usr/lib/firefox/browser/defaults/preferences/all-jenkins.js && \
+    echo 'pref("browser.tabs.remote.autostart.2", false);' >> /usr/lib/firefox/browser/defaults/preferences/all-jenkins.js && \
+    echo 'pref("security.sandbox.content.level", 0);' >> /usr/lib/firefox/browser/defaults/preferences/all-jenkins.js
+
+# Wrapper para Xvfb (opcional)
 RUN echo '#!/bin/bash\nxvfb-run -a -s "-screen 0 1920x1080x24 -ac +extension RANDR" "$@"' > /usr/local/bin/run-headless \
     && chmod +x /usr/local/bin/run-headless
 

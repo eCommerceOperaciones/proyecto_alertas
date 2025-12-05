@@ -95,19 +95,15 @@ def setup_driver() -> webdriver.Firefox:
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--window-size=1920,1080")
-
-    profile_path = os.path.join(WORKSPACE, "profiles", "selenium_cert")
-    if os.path.exists(profile_path):
-        options.profile = webdriver.FirefoxProfile(profile_path)
-        log("info", "Perfil con certificados cargado correctamente")
-    else:
-        log("error", "PERFIL NO ENCONTRADO")
-        raise FileNotFoundError(profile_path)
+    
+    # USAR EL PERFIL "gsit" QUE CREAMOS LIMPIO
+    options.add_argument("-profile")
+    options.add_argument("/home/jenkins/.mozilla/firefox/gsit")  # ruta por defecto del usuario jenkins
 
     service = Service(GeckoDriverManager().install())
     driver = webdriver.Firefox(service=service, options=options)
     driver.set_page_load_timeout(60)
-    log("info", "Driver Firefox iniciado correctamente")
+    log("info", "Driver iniciado con perfil limpio + pkcs11-loader")
     return driver
 
 # =========================
