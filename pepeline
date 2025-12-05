@@ -2,12 +2,12 @@ pipeline {
     agent any
 
     parameters {
-        string(name: 'ALERT_ID', defaultValue: '', description: 'ID de la alerta (ej: 20251016_211645)')
-        string(name: 'ALERT_NAME', defaultValue: '', description: 'Nombre descriptivo de la alerta')
-        string(name: 'SCRIPT_NAME', defaultValue: '', description: 'Nombre del script ejecutado (con .py)')
-        string(name: 'STATUS', defaultValue: 'error', description: 'falso_positivo / alarma_confirmada / error')
-        string(name: 'ERROR_MSG', defaultValue: '', description: 'Mensaje de error si aplica')
-        string(name: 'SCREENSHOTS', defaultValue: '', description: 'Rutas de capturas separadas por espacio')
+        string(name: 'ALERT_ID',      defaultValue: '', description: 'ID de la alerta')
+        string(name: 'ALERT_NAME',    defaultValue: '', description: 'Nombre descriptivo de la alerta')
+        string(name: 'SCRIPT_NAME',   defaultValue: '', description: 'Nombre del script ejecutado (con .py o sin)')
+        string(name: 'STATUS',        defaultValue: 'error', description: 'falso_positivo / alarma_confirmada / error')
+        string(name: 'ERROR_MSG',     defaultValue: '', description: 'Mensaje de error si aplica')
+        string(name: 'SCREENSHOTS',   defaultValue: '', description: 'Rutas de capturas separadas por espacio (se rellenará automáticamente)')
     }
 
     stages {
@@ -18,118 +18,134 @@ pipeline {
                               filter: 'utils/**, email_templates/**',
                               target: '',
                               flatten: false
-                sh 'ls -la utils/ email_templates/ || true'
             }
         }
 
-        stage('Copiar artefactos de ejecución') {
+        stage('Copiar capturas y resultados') {
             steps {
                 copyArtifacts projectName: 'GSIT_Alerts/03_Ejecutar_Script',
                               selector: upstream(),
-                              filter: 'runs/**/screenshots/*.png, runs/**/result.json',
+                              filter: 'artifacts/screenshots/*.png, runs/**/result.json',
                               target: 'artifacts/',
                               flatten: false
+                sh 'ls -la artifacts/screenshots/ || true'
             }
         }
 
-        stage('Preparar entorno Python') {
+        stage('Preparar Python + Jinja2') {
             steps {
                 sh '''
                     python3 -m venv venv
                     ./venv/bin/pip install --upgrade pip > /dev/null
-                    ./venv/bin/pip install jinja2 beautifulsoup4 > /dev/null
+                    ./venv/bin/pip install jinja2 > /dev/null
                 '''
             }
         }
 
-        stage('Generar correo HTML + destinatarios') {
+        stage('Generar correo HTML') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'email-alertas-user',
-                                                usernameVariable: 'EMAIL_USER',
-                                                passwordVariable: 'EMAIL_PASS')]) {
-                    sh '''
-                        export PYTHONPATH="$WORKSPACE:$PYTHONPATH"
+                                                 usernameVariable: 'EMAIL_USER',
+                                                 passwordVariable: 'EMAIL_PASS')]) {
+                    sh """
+                        export PYTHONPATH="\$WORKSPACE:\$PYTHONPATH"
 
                         ./venv/bin/python - <<'PY'
 import os
-from utils.email_generator import (
-    generate_false_positive_email,
-    generate_error_email,
-    generate_alert_email
-)
+import re
+from jinja2 import Template
 
-script_name = "${params.SCRIPT_NAME}"
-alert_name  = "${params.ALERT_NAME}"
-alert_id    = "${params.ALERT_ID}"
-status      = "${params.STATUS}".strip().lower()
+# -------------------------------
+# Cargar plantilla
+#---------------
+def load_template(name):
+    path = os.path.join("email_templates", f"{name}.html")
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read()
 
-# Rutas reales de capturas (para incrustar o adjuntar)
-screenshots = "${params.SCREENSHOTS}".strip().split()
+# -------------------------------
+# Parámetros que vienen de Jenkins
+# (¡AHORA SÍ SE EXPANDEN!)
+# -------------------------------
+script_name = "${params.SCRIPT_NAME}".strip()
+alert_name   = "${params.ALERT_NAME}".strip()
+alert_id     = "${params.ALERT_ID}".strip() or "sin-id"
+status_raw   = "${params.STATUS}".strip().lower()
+error_msg    = "${params.ERROR_MSG}".strip()
+screenshots  = "${params.SCREENSHOTS}".strip()
 
-if status == "falso_positivo":
-    html = generate_false_positive_email(
-        script_name=script_name,
-        alert_name=alert_name,
-        alert_type="GSIT",
-        alert_id=alert_id,
-        job_name="GSIT_Alerts"
+print("STATUS recibido →", status_raw)
+print("SCREENSHOTS recibido →", screenshots)
+
+# -------------------------------
+# Generación según tipo
+# -------------------------------
+if status_raw == "falso_positivo" or status_raw == "falso_positivo":
+    template_str = load_template("false_positive")
+    template = Template(template_str)
+    html = template.render(
+        script_name = script_name,
+        alert_name  = alert_name,
+        alert_type  = "GSIT",
+        alert_id    = alert_id,
+        job_name    = os.environ.get("JOB_NAME", "GSIT_Alerts"),
+        build_number = os.environ.get("BUILD_NUMBER", "?")
     )
-    recipients = "ecommerceoperaciones01@gmail.com,"
+    recipients = "rpinheiro@viewnext.com"
 
-elif status == "alarma_confirmada":
-    # Usa la plantilla específica del script (ej: acces_frontal_emd.html)
-    base_name = os.path.basename(script_name).replace(".py", "")
-    body_text = "Alerta real confirmada por automatización GSIT"
-    html, excel_data = generate_alert_email(
-        script_name=base_name,
-        body=body_text,
-        alert_type="ACTIVA",
-        alert_id=alert_id
-    )
-    recipients = "ecommerceoperaciones01@gmail.com,"
+elif status_raw == "alarma_confirmada":
+    template_str = load_template("alert_active")
+    template = Template(template_str)
+    html = template.render(alert_name=alert_name, alert_id=alert_id)
+    recipients = "ecommerceoperaciones01@gmail.com"
 
 else:  # error
-    html = generate_error_email(
-        script_name=script_name,
-        alert_name=alert_name,
-        alert_type="ERROR EN AUTOMATIZACIÓN",
-        alert_id=alert_id,
-        error_message="${params.ERROR_MSG}" or "Error desconocido durante ejecución",
-        retry_count=0,
-        max_retries=3
+    template_str = load_template("error")
+    template = Template(template_str)
+    html = template.render(
+        script_name   = script_name,
+        alert_name    = alert_name,
+        alert_type    = "ERROR EN AUTOMATIZACIÓN",
+        alert_id      = alert_id,
+        error_message = error_msg or "Error desconocido",
+        retry_count   = 0,
+        max_retries   = 3
     )
-    recipients = "ecommerceoperaciones01@gmail.com,"
+    recipients = "ecommerceoperaciones01@gmail.com"
 
-# Guardar HTML y destinatarios
+# Guardar resultados
 with open("email_final.html", "w", encoding="utf-8") as f:
     f.write(html)
 with open("recipients.txt", "w", encoding="utf-8") as f:
     f.write(recipients)
 
-print(f"Correo generado → {status.upper()} para: {recipients}")
+print("Correo generado correctamente para:", recipients)
 PY
-                    '''
+                    """
                 }
             }
         }
 
-        stage('Enviar correo') {
+       stage('Enviar correo') {
             steps {
                 script {
-                    def recip = readFile('recipients.txt').trim()
-                    def attachments = (params.STATUS == 'falso_positivo' || params.STATUS == 'alarma_confirmada') ? params.SCREENSHOTS : ''
+                    def htmlBody = readFile('email_final.html')
+                    def recip    = readFile('recipients.txt').trim()
+
+                    // CLAVE: ahora funciona siempre
+                    def attachPattern = (params.SCREENSHOTS == '*') ? 'artifacts/screenshots/*.png' : ''
 
                     emailext(
-                        subject: "GSIT • ${params.ALERT_NAME} [${params.ALERT_ID}] • ${params.STATUS.toUpperCase()}",
-                        body: '${FILE,path="email_final.html"}',
+                        subject: "GSIT • ${params.ALERT_NAME} [${params.ALERT_ID}] • ${params.STATUS.replace('_',' ').toUpperCase()}",
+                        body: htmlBody,
                         mimeType: 'text/html',
-                        to: 'rpinheiro@viewnext.com',
-                        from: 'gsit-alertas@viewnext.com',
-                        replyTo: 'no-reply@viewnext.com',
-                        attachmentsPattern: attachments,
-                        attachLog: params.STATUS == 'error'
+                        to: recip,
+                        from: 'alertas-gsit@dominio.com',
+                        replyTo: 'alertas-gsit@dominio.com',
+                        attachmentsPattern: attachPattern,
+                        attachLog: params.STATUS.toLowerCase().contains('error')
                     )
-                    echo "Correo enviado correctamente a: ${recip}"
+                    echo "Correo enviado correctamente a ${recip} ${attachPattern ? 'con capturas adjuntas' : 'sin adjuntos'}"
                 }
             }
         }
@@ -137,7 +153,7 @@ PY
 
     post {
         always {
-            archiveArtifacts artifacts: 'email_final.html, recipients.txt, artifacts/**', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'email_final.html, recipients.txt, artifacts/screenshots/*.png', allowEmptyArchive: true
             cleanWs()
         }
     }
