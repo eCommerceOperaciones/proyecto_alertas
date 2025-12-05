@@ -90,40 +90,18 @@ def setup_driver() -> webdriver.Firefox:
     from selenium.webdriver.firefox.service import Service
     from webdriver_manager.firefox import GeckoDriverManager
 
-    # Aseguramos DISPLAY (xvfb-run ya lo pone, pero por si acaso)
-    if not os.environ.get("DISPLAY"):
-        os.environ["DISPLAY"] = ":99"
-
     options = Options()
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
-    
-    # ESTAS DOS LÍNEAS SON LAS QUE RESUELVEN TU ERROR ACTUAL
-    options.add_argument("--disable-seccomp-sandbox")      # ← CLAVE para Jenkins con user namespaces bloqueados
-    options.set_capability("moz:firefoxOptions", {"args": ["--disable-seccomp-sandbox"]})
 
-    # Desactivamos completamente el sandbox de contenido (necesario en muchos contenedores)
-    options.set_preference("security.sandbox.content.level", 0)
-
-    # Perfil con certificados si existe
-    profile_path = os.path.join(WORKSPACE, "profiles", "selenium_cert")
-    if os.path.exists(profile_path):
-        options.profile = webdriver.FirefoxProfile(profile_path)
-
-    # Usamos webdriver-manager para descargar geckodriver automáticamente
     service = Service(GeckoDriverManager().install())
-
-    try:
-        driver = webdriver.Firefox(service=service, options=options)
-        driver.set_page_load_timeout(60)
-        log("info", "Driver Firefox iniciado correctamente (sandbox desactivado)")
-        return driver
-    except Exception as e:
-        log("error", f"Error crítico al iniciar Firefox: {e}")
-        raise
+    
+    driver = webdriver.Firefox(service=service, options=options)
+    driver.set_page_load_timeout(60)
+    log("info", "Driver Firefox iniciado correctamente")
+    return driver
 
 # =========================
 # Funciones de interacción
