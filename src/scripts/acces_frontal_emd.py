@@ -94,40 +94,21 @@ def setup_driver() -> webdriver.Firefox:
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
-    # CRUCIAL: evita que Firefox intente usar aceleración gráfica o sandbox interno
-    options.add_argument("--disable-features=UseOzonePlatform,UseChromeOSDirectVideoDecoder")
-    options.add_argument("--disable-extensions-except=")  # evita errores con extensiones
 
-    # CARGAR PERFIL CON CERTIFICADOS
     profile_path = os.path.join(WORKSPACE, "profiles", "selenium_cert")
     if os.path.exists(profile_path):
-        firefox_profile = webdriver.FirefoxProfile(profile_path)
-        
-        # FORZAR CONFIGURACIÓN HEADLESS EN EL PERFIL CARGADO
-        firefox_profile.set_preference("browser.tabs.remote.autostart", False)
-        firefox_profile.set_preference("browser.tabs.remote.autostart.2", False)
-        firefox_profile.set_preference("extensions.autoDisableScopes", 0)
-        firefox_profile.set_preference("security.sandbox.content.level", 0)
-        firefox_profile.update_preferences()
-        
-        options.profile = firefox_profile
-        log("info", f"Perfil con certificados cargado y preparado para headless")
+        options.profile = webdriver.FirefoxProfile(profile_path)
+        log("info", "Perfil con certificados cargado correctamente")
     else:
-        log("error", "PERFIL selenium_cert NO ENCONTRADO")
-        raise FileNotFoundError("Falta carpeta profiles/selenium_cert")
+        log("error", "PERFIL NO ENCONTRADO")
+        raise FileNotFoundError(profile_path)
 
     service = Service(GeckoDriverManager().install())
-    
-    try:
-        driver = webdriver.Firefox(service=service, options=options)
-        driver.set_page_load_timeout(60)
-        log("info", "Driver Firefox iniciado correctamente con perfil certificado")
-        return driver
-    except Exception as e:
-        log("error", f"Error al iniciar Firefox: {e}")
-        raise
+    driver = webdriver.Firefox(service=service, options=options)
+    driver.set_page_load_timeout(60)
+    log("info", "Driver Firefox iniciado correctamente")
+    return driver
 
 # =========================
 # Funciones de interacción
