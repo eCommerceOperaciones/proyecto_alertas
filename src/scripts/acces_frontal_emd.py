@@ -90,7 +90,6 @@ def setup_driver() -> webdriver.Firefox:
     from selenium.webdriver.firefox.service import Service
     from webdriver_manager.firefox import GeckoDriverManager
 
-    # Si por algún motivo DISPLAY no está definido (raro con xvfb-run), lo forzamos
     if not os.environ.get("DISPLAY"):
         os.environ["DISPLAY"] = ":99"
 
@@ -100,9 +99,9 @@ def setup_driver() -> webdriver.Firefox:
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
+    options.add_argument("--disable-seccomp-sandbox")   # ← AÑADE ESTO
     options.set_preference("security.sandbox.content.level", 0)
 
-    # Perfil de certificados (si lo tienes)
     profile_path = os.path.join(WORKSPACE, "profiles", "selenium_cert")
     if os.path.exists(profile_path):
         options.profile = webdriver.FirefoxProfile(profile_path)
