@@ -91,14 +91,18 @@ def setup_driver() -> webdriver.Firefox:
         write_status("error")
         save_result("error", f"Perfil Selenium no encontrado en: {profile_path}")
         sys.exit(2)
+
     options = Options()
-    options.add_argument("--headless")
+    options.add_argument("--headless")  # Modo sin interfaz gráfica
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
     options.profile = webdriver.FirefoxProfile(profile_path)
-    service = Service("drivers/geckodriver")
+
+    # Usar el geckodriver instalado globalmente en el contenedor
+    service = Service("/usr/local/bin/geckodriver")
+
     driver = webdriver.Firefox(service=service, options=options)
     driver.set_page_load_timeout(60)
     return driver
