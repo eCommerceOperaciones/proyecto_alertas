@@ -86,66 +86,43 @@ def save_result(status, error_message=None, screenshots=None):
 # Driver Selenium
 # =========================
 def setup_driver() -> webdriver.Firefox:
-    import os
-    import subprocess
     from selenium import webdriver
     from selenium.webdriver.firefox.options import Options
     from selenium.webdriver.firefox.service import Service
+    from webdriver_manager.firefox import GeckoDriverManager
+    import subprocess
+    import os
 
-    # -------------------------
-    # Arrancar Xvfb si no está corriendo
-    # -------------------------
+    # ---------- Xvfb ----------
     display = ":99"
-    xvfb_running = False
-    try:
-        result = subprocess.run(["pgrep", "-f", f"Xvfb {display}"], capture_output=True)
-        if result.returncode == 0:
-            xvfb_running = True
-    except Exception:
-        pass
+    if not os.getenv("DISPLAY"):
+        subprocess.Popen(["Xvfb", display, "-screen", "0", "1920x1080x24", "-ac"])
+        os.environ["DISPLAY"] = display
+        time.sleep(1)  # darle un segundito
 
-    if not xvfb_running:
-        subprocess.Popen(["Xvfb", display, "-screen", "0", "1920x1080x24"])
-    
-    os.environ["DISPLAY"] = display
-
-    # -------------------------
-    # Configuración de Firefox
-    # -------------------------
+    # ---------- Opciones Firefox ----------
     options = Options()
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
+    options.add_argument("--disable-extensions")
     options.set_preference("security.sandbox.content.level", 0)
 
-    # Perfil opcional preconfigurado (certificados, etc.)
+    # Perfil con certificados (opcional)
     profile_path = os.path.join(WORKSPACE, "profiles", "selenium_cert")
     if os.path.exists(profile_path):
         options.profile = webdriver.FirefoxProfile(profile_path)
 
-    # -------------------------
-    # Servicio Geckodriver
-    # -------------------------
-    service = Service(executable_path="/usr/bin/geckodriver")  
+    # ---------- ESTO ES LO IMPORTANTE ----------
+    # webdriver-manager descarga automáticamente la versión correcta de geckodriver
+    service = Service(GeckoDriverManager().install())
 
-    # -------------------------
-    # Crear driver
-    # -------------------------
-    try:
-        driver = webdriver.Firefox(service=service, options=options)
-        driver.set_page_load_timeout(60)
-        print("✓ Driver Firefox inicializado correctamente")
-        print("DISPLAY:", os.environ.get("DISPLAY"))
-        return driver
-    except Exception as e:
-        print(f"✗ Error al iniciar el driver Firefox: {e}")
-        raise
-
-        print(f"✗ Error al iniciar el driver Firefox: {e}")
-        raise
-
+    driver = webdriver.Firefox(service=service, options=options)
+    driver.set_page_load_timeout(60)
+    log("info", "Driver Firefox inicializado correctamente con webdriver-manager")
+    return driver
 
 # =========================
 # Funciones de interacción
