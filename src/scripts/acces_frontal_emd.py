@@ -23,6 +23,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.firefox import GeckoDriverManager
+from selenium.webdriver.firefox.service import Service
 
 # =========================
 # Cargar configuración
@@ -97,7 +98,7 @@ def setup_driver() -> webdriver.Firefox:
     display = ":99"
     xvfb_running = False
     try:
-        result = subprocess.run(["pgrep", "-f", "Xvfb :99"], capture_output=True)
+        result = subprocess.run(["pgrep", "-f", f"Xvfb {display}"], capture_output=True)
         if result.returncode == 0:
             xvfb_running = True
     except Exception:
@@ -127,7 +128,7 @@ def setup_driver() -> webdriver.Firefox:
     # -------------------------
     # Servicio Geckodriver
     # -------------------------
-    service = Service("/usr/bin/geckodriver")  # Asegúrate de que geckodriver esté instalado y en este path
+    service = Service(executable_path="/usr/bin/geckodriver")  
 
     # -------------------------
     # Crear driver
@@ -139,6 +140,9 @@ def setup_driver() -> webdriver.Firefox:
         print("DISPLAY:", os.environ.get("DISPLAY"))
         return driver
     except Exception as e:
+        print(f"✗ Error al iniciar el driver Firefox: {e}")
+        raise
+
         print(f"✗ Error al iniciar el driver Firefox: {e}")
         raise
 
