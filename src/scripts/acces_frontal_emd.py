@@ -96,6 +96,15 @@ def setup_driver() -> webdriver.Firefox:
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--window-size=1920,1080")
 
+    # AÑADE ESTO: CARGAR EL PERFIL CON LOS CERTIFICADOS
+    profile_path = os.path.join(WORKSPACE, "profiles", "selenium_cert")
+    if os.path.exists(profile_path):
+        options.profile = webdriver.FirefoxProfile(profile_path)
+        log("info", f"Perfil con certificados cargado desde: {profile_path}")
+        log("info", f"Certificados encontrados: cert9.db={'cert9.db' in os.listdir(profile_path)}")
+    else:
+        log("warn", "PERFIL selenium_cert NO ENCONTRADO → Se usará perfil limpio (fallará el certificado)")
+
     service = Service(GeckoDriverManager().install())
     
     driver = webdriver.Firefox(service=service, options=options)
