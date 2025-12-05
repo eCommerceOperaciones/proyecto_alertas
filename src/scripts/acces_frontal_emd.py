@@ -92,12 +92,16 @@ def setup_driver() -> webdriver.Firefox:
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
 
-    # Si quieres usar perfil, descomenta y asegúrate que existe
+    # 🔥 FIX para Jenkins / Docker
+    options.set_preference("security.sandbox.content.level", 0)
+
     profile_path = os.path.join(WORKSPACE, "profiles", "selenium_cert")
     if os.path.exists(profile_path):
         options.profile = webdriver.FirefoxProfile(profile_path)
 
-    service = Service("/usr/local/bin/geckodriver")
+    # ✔ Mejor que webdriver-manager
+    service = Service("/usr/bin/geckodriver")
+
     driver = webdriver.Firefox(service=service, options=options)
     driver.set_page_load_timeout(60)
     return driver
