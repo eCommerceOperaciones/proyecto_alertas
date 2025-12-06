@@ -1,8 +1,6 @@
 services:
   jenkins:
-    build:
-      context: .
-      dockerfile: docker/jenkins/Dockerfile
+    image: jenkins/jenkins:lts-jdk17
     container_name: jenkins-gsit
     restart: unless-stopped
     ports:
@@ -10,9 +8,16 @@ services:
       - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      - JAVA_OPTS=-Djava.awt.headless=true -Dhudson.model.DirectoryBrowserSupport.CSP=""
+      - JAVA_OPTS=-Djava.awt.headless=true
+
+  selenium:
+    image: selenium/standalone-firefox:124.0
+    container_name: selenium-firefox
+    ports:
+      - "4444:4444"
+      - "7900:7900"
+    shm_size: 2g
 
 volumes:
   jenkins_home:
