@@ -86,26 +86,27 @@ def save_result(status, error_message=None, screenshots=None):
 # Driver Selenium
 # =========================
 def setup_driver() -> webdriver.Firefox:
-    from selenium import webdriver
     from selenium.webdriver.firefox.options import Options
+    from selenium.webdriver.firefox.service import Service
+    from webdriver_manager.firefox import GeckoDriverManager
 
     options = Options()
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
 
-    # EL PERFIL QUE YA ESTÁ EN EL WORKSPACE (copiado desde job 01)
-    profile_path = "/var/jenkins_home/workspace/GSIT_Alerts/03_GSIT_Alerts_Ejecutar_Script/profiles/selenium_cert"
-    
-    options.add_argument("-profile")
-    options.add_argument(profile_path)
+    profile_path = os.path.join(os.getcwd(), "profiles", "selenium_cert")
+    if os.path.exists(profile_path):
+        options.profile = webdriver.FirefoxProfile(profile_path)
+        log("info", "Perfil con certificado cargado correctamente")
+    else:
+        log("error", "PERFIL NO ENCONTRADO")
+        raise FileNotFoundError(profile_path)
 
-    driver = webdriver.Remote(
-        command_executor="http://selenium-firefox:4444/wd/hub",
-        options=options
-    )
+    service = Service(GeckoDriverManager().install())
+    driver = webdriver.Firefox(service=service, options=options)
     driver.set_page_load_timeout(60)
-    log("info", "Conectado al nodo Selenium con TU perfil de git → certificado automático")
+    log("info", "Driver iniciado correctamente")
     return driver
 
 # =========================
