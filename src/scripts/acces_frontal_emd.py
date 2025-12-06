@@ -86,25 +86,26 @@ def save_result(status, error_message=None, screenshots=None):
 # Driver Selenium
 # =========================
 def setup_driver() -> webdriver.Firefox:
+    from selenium import webdriver
     from selenium.webdriver.firefox.options import Options
-    from selenium.webdriver.firefox.service import Service
-    from webdriver_manager.firefox import GeckoDriverManager
 
     options = Options()
     options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--window-size=1920,1080")
 
-    # MONTAMOS TU PERFIL REAL (el que tiene el certificado)
-    profile_path = "/root/.mozilla/firefox"  # ruta dentro del contenedor
-    options.profile = webdriver.FirefoxProfile(profile_path)
-    log("info", "Perfil con certificado digital cargado correctamente")
+    # EL PERFIL QUE YA ESTÁ EN EL WORKSPACE (copiado desde job 01)
+    profile_path = "/var/jenkins_home/workspace/GSIT_Alerts/03_GSIT_Alerts_Ejecutar_Script/profiles/selenium_cert"
+    
+    options.add_argument("-profile")
+    options.add_argument(profile_path)
 
-    service = Service(GeckoDriverManager().install())
-    driver = webdriver.Firefox(service=service, options=options)
+    driver = webdriver.Remote(
+        command_executor="http://selenium-firefox:4444/wd/hub",
+        options=options
+    )
     driver.set_page_load_timeout(60)
-    log("info", "Driver Firefox iniciado correctamente")
+    log("info", "Conectado al nodo Selenium con TU perfil de git → certificado automático")
     return driver
 
 # =========================

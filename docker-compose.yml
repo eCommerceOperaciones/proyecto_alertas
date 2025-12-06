@@ -8,8 +8,6 @@ services:
       - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
-    environment:
-      - JAVA_OPTS=-Djava.awt.headless=true
 
   selenium:
     image: selenium/standalone-firefox:124.0
@@ -18,11 +16,6 @@ services:
       - "4444:4444"
       - "7900:7900"
     shm_size: 2g
-    volumes:
-      - ~/selenium_profile:/root/.mozilla/firefox # ← TU PERFIL CON EL CERTIFICADO
-    # Opcional: para que arranque después de Jenkins
-    depends_on:
-      - jenkins
 
 volumes:
   jenkins_home:
