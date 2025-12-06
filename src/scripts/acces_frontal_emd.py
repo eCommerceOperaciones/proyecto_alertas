@@ -86,17 +86,25 @@ def save_result(status, error_message=None, screenshots=None):
 # Driver Selenium
 # =========================
 def setup_driver() -> webdriver.Firefox:
-    from selenium import webdriver
     from selenium.webdriver.firefox.options import Options
+    from selenium.webdriver.firefox.service import Service
+    from webdriver_manager.firefox import GeckoDriverManager
 
     options = Options()
-    # NO necesitas perfil, NO necesitas sandbox, NO necesitas nada más
-    driver = webdriver.Remote(
-        command_executor="http://selenium-firefox:4444/wd/hub",
-        options=options
-    )
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--window-size=1920,1080")
+
+    # MONTAMOS TU PERFIL REAL (el que tiene el certificado)
+    profile_path = "/root/.mozilla/firefox"  # ruta dentro del contenedor
+    options.profile = webdriver.FirefoxProfile(profile_path)
+    log("info", "Perfil con certificado digital cargado correctamente")
+
+    service = Service(GeckoDriverManager().install())
+    driver = webdriver.Firefox(service=service, options=options)
     driver.set_page_load_timeout(60)
-    log("info", "Conectado al nodo Selenium Firefox → TODO AUTOMÁTICO")
+    log("info", "Driver Firefox iniciado correctamente")
     return driver
 
 # =========================

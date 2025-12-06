@@ -1,6 +1,6 @@
 services:
   jenkins:
-    image: jenkins/jenkins:lts-jdk17
+    image: jenkins-gsit-python
     container_name: jenkins-gsit
     restart: unless-stopped
     ports:
@@ -18,6 +18,11 @@ services:
       - "4444:4444"
       - "7900:7900"
     shm_size: 2g
+    volumes:
+      - ~/selenium_profile:/root/.mozilla/firefox # ← TU PERFIL CON EL CERTIFICADO
+    # Opcional: para que arranque después de Jenkins
+    depends_on:
+      - jenkins
 
 volumes:
   jenkins_home:
