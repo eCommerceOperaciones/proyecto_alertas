@@ -90,23 +90,22 @@ def setup_driver() -> webdriver.Firefox:
     from selenium.webdriver.firefox.service import Service
     from webdriver_manager.firefox import GeckoDriverManager
 
-    options = Options()
-    options.add_argument("--headless")
-    options.set_preference("profile", "/home/jenkins/.mozilla/firefox/selenium_cert")
-
     profile_path = os.path.join(os.getcwd(), "profiles", "selenium_cert")
-    if os.path.exists(profile_path):
-        options.profile = webdriver.FirefoxProfile(profile_path)
-        log("info", "Perfil con certificado cargado correctamente")
-    else:
-        log("error", "PERFIL NO ENCONTRADO")
-        raise FileNotFoundError(profile_path)
 
-    service = Service(GeckoDriverManager().install())
-    driver = webdriver.Firefox(service=Service("/usr/bin/geckodriver"),options=options)
+    if not os.path.exists(profile_path):
+        raise Exception(f"Perfil Firefox no encontrado: {profile_path}")
 
-    driver.set_page_load_timeout(60)
-    log("info", "Driver iniciado correctamente")
+    options = Options()
+    options.add_argument("-profile")
+    options.add_argument(profile_path)
+    options.add_argument("--headless")
+
+    driver = webdriver.Firefox(
+        service=Service("/usr/local/bin/geckodriver"),
+        options=options
+    )
+
+    log("info", "Firefox iniciado con perfil cargado")
     return driver
 
 # =========================

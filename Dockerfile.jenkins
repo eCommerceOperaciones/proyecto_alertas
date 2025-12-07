@@ -2,6 +2,7 @@ FROM jenkins/jenkins:lts
 
 USER root
 
+# Instalar Python, Firefox, Xvfb
 RUN apt-get update && apt-get install -y \
     python3 python3-pip python3-venv \
     firefox-esr \
@@ -9,13 +10,17 @@ RUN apt-get update && apt-get install -y \
     wget unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# instalar geckodriver manualmente
+# Instalar geckodriver
 RUN wget https://github.com/mozilla/geckodriver/releases/download/v0.34.0/geckodriver-v0.34.0-linux64.tar.gz \
     && tar -xzf geckodriver-v0.34.0-linux64.tar.gz \
-    && mv geckodriver /usr/bin/ \
-    && chmod +x /usr/bin/geckodriver
+    && mv geckodriver /usr/bin/geckodriver \
+    && chmod +x /usr/bin/geckodriver \
+    && rm -f geckodriver-v0.34.0-linux64.tar.gz
 
-# copiar perfil firefox com certificado digital
+# Copiar perfil com certificado (A1 .p12)
 COPY profiles/selenium_cert /home/jenkins/.mozilla/firefox/selenium_cert
+
+# Ajustar permissões
+RUN chown -R jenkins:jenkins /home/jenkins/.mozilla
 
 USER jenkins
