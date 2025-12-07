@@ -92,8 +92,7 @@ def setup_driver() -> webdriver.Firefox:
 
     options = Options()
     options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
+    options.set_preference("profile", "/home/jenkins/.mozilla/firefox/selenium_cert")
 
     profile_path = os.path.join(os.getcwd(), "profiles", "selenium_cert")
     if os.path.exists(profile_path):
@@ -104,7 +103,8 @@ def setup_driver() -> webdriver.Firefox:
         raise FileNotFoundError(profile_path)
 
     service = Service(GeckoDriverManager().install())
-    driver = webdriver.Firefox(service=service, options=options)
+    driver = webdriver.Firefox(service=Service("/usr/bin/geckodriver"),options=options)
+
     driver.set_page_load_timeout(60)
     log("info", "Driver iniciado correctamente")
     return driver

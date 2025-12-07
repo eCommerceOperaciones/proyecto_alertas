@@ -1,8 +1,6 @@
 services:
   jenkins:
-    build:
-      context: .
-      dockerfile: Dockerfile.jenkins
+    build: .
     container_name: jenkins-gsit
     restart: unless-stopped
     ports:
@@ -10,8 +8,6 @@ services:
       - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
-    environment:
-      - JAVA_OPTS=-Djava.awt.headless=true
 
 volumes:
   jenkins_home:

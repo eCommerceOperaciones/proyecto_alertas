@@ -1,29 +1,21 @@
-# Dockerfile.jenkins
-FROM jenkins/jenkins:lts-jdk17
+FROM jenkins/jenkins:lts
 
 USER root
 
-# Instalar Python + Firefox ESR + dependencias
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y \
     python3 python3-pip python3-venv \
     firefox-esr \
     xvfb \
-    libgtk-3-0 libdbus-glib-1-2 libxt6 \
-    wget ca-certificates \
+    wget unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Python como comando principal
-RUN ln -s /usr/bin/python3 /usr/bin/python
+# instalar geckodriver manualmente
+RUN wget https://github.com/mozilla/geckodriver/releases/download/v0.34.0/geckodriver-v0.34.0-linux64.tar.gz \
+    && tar -xzf geckodriver-v0.34.0-linux64.tar.gz \
+    && mv geckodriver /usr/bin/ \
+    && chmod +x /usr/bin/geckodriver
 
-# Geckodriver (versión fija, sin API)
-RUN wget -O /tmp/geckodriver.tar.gz \
-    https://github.com/mozilla/geckodriver/releases/download/v0.34.0/geckodriver-v0.34.0-linux64.tar.gz \
-    && tar -xzf /tmp/geckodriver.tar.gz -C /usr/local/bin \
-    && chmod +x /usr/local/bin/geckodriver \
-    && rm /tmp/geckodriver.tar.gz
-
-# Script para ejecutar con Xvfb automáticamente
-RUN echo '#!/bin/bash\n/usr/bin/xvfb-run -a -s "-screen 0 1920x1080x24 -ac" "$@"' > /usr/local/bin/xvfb-run-safe \
-    && chmod +x /usr/local/bin/xvfb-run-safe
+# copiar perfil firefox com certificado digital
+COPY profiles/selenium_cert /home/jenkins/.mozilla/firefox/selenium_cert
 
 USER jenkins
