@@ -23,7 +23,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.firefox import GeckoDriverManager
-from selenium.webdriver.firefox.service import Service
+
+
 
 # =========================
 # Cargar configuración
@@ -86,26 +87,33 @@ def save_result(status, error_message=None, screenshots=None):
 # Driver Selenium
 # =========================
 def setup_driver() -> webdriver.Firefox:
-    from selenium.webdriver.firefox.options import Options
-    from selenium.webdriver.firefox.service import Service
-    from webdriver_manager.firefox import GeckoDriverManager
-
     profile_path = os.path.join(os.getcwd(), "profiles", "selenium_cert")
 
-    if not os.path.exists(profile_path):
-        raise Exception(f"Perfil Firefox no encontrado: {profile_path}")
+    if not os.path.isdir(profile_path):
+        raise Exception(f"[ERROR] Perfil de Firefox NO encontrado en: {profile_path}")
 
+    # Configuración de Firefox
     options = Options()
-    options.add_argument("-profile")
-    options.add_argument(profile_path)
-    options.add_argument("--headless")
+    options.set_preference("security.default_personal_cert", "Select Automatically")
+    options.set_preference("browser.tabs.remote.autostart", False)
+    options.set_preference("browser.privatebrowsing.autostart", False)
+
+    # ⚠ No usar headless aquí — XVFB ya crea el entorno virtual
+    # options.add_argument("--headless")  # NO USAR
+
+    # Cargar perfil manualmente
+    fp = webdriver.FirefoxProfile(profile_path)
+
+    # Servicio de geckodriver (instalado en Docker)
+    service = Service("/usr/local/bin/geckodriver")
 
     driver = webdriver.Firefox(
-        service=Service("/usr/local/bin/geckodriver"),
+        firefox_profile=fp,
+        service=service,
         options=options
     )
 
-    log("info", "Firefox iniciado con perfil cargado")
+    print("[INFO] Firefox iniciado con perfil cargado y certificado digital A1.")
     return driver
 
 # =========================
