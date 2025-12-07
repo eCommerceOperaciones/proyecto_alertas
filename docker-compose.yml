@@ -1,6 +1,8 @@
 services:
   jenkins:
-    image: jenkins-gsit-python
+    build:
+      context: .
+      dockerfile: Dockerfile.jenkins
     container_name: jenkins-gsit
     restart: unless-stopped
     ports:
@@ -8,14 +10,8 @@ services:
       - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
-
-  selenium:
-    image: selenium/standalone-firefox:124.0
-    container_name: selenium-firefox
-    ports:
-      - "4444:4444"
-      - "7900:7900"
-    shm_size: 2g
+    environment:
+      - JAVA_OPTS=-Djava.awt.headless=true
 
 volumes:
   jenkins_home:
