@@ -2,19 +2,27 @@ import os
 import re
 import json
 import logging
+import traceback
 from dotenv import load_dotenv
 from imapclient import IMAPClient
 from email import message_from_bytes
 from email.header import decode_header, make_header
 from bs4 import BeautifulSoup
 from datetime import datetime
+import unicodedata
 
+# Configuración de logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[
+        logging.FileHandler("email_listener.log", encoding="utf-8"),
+        logging.StreamHandler()
+    ]
 )
 
+# Cargar variables de entorno (.env para desarrollo, Jenkins env vars en producción)
 load_dotenv()
 
 WORKSPACE = os.getenv("WORKSPACE", os.getcwd())
@@ -23,6 +31,7 @@ IMAP_PORT = int(os.getenv("IMAP_PORT", "993"))
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 
+# Configuración de alertas (puede moverse a config.json)
 ALERTS = {
     "Alerta Acces Frontal": {
         "from": "rpinheiro@viewnext.com",
@@ -47,12 +56,13 @@ ALERTS = {
 def decode_mime_words(s):
     try:
         return str(make_header(decode_header(s)))
-    except:
+    except Exception:
         return s or ""
 
 def normalize_text(text):
     if not isinstance(text, str):
         return ""
+    text = unicodedata.normalize("NFKD", text)
     text = re.sub(r"[^\w\s]", " ", text)
     return re.sub(r"\s+", " ", text.strip().lower())
 
@@ -144,15 +154,17 @@ def check_email():
                         "email_subject": subject,
                         "email_body": body
                     })
-                    # Solo marcar como leído si es alerta válida
                     server.add_flags(msgid, ['\\Seen'])
 
     except Exception as e:
-        logging.error(f"Error en check_email: {e}")
+        logging.error(f"Error en check_email: {e}\n{traceback.format_exc()}")
 
-    print(json.dumps(alerts_found))
+    return alerts_found
 
 if __name__ == "__main__":
     alerts = check_email()
-    with open("listener_output.json", "w", encoding="utf-8") as f:
+    output_path = os.path.join(WORKSPACE, "listener_output.json")
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump(alerts, f, indent=2, ensure_ascii=False)
+    logging.info(f"Archivo de salida guardado en: {output_path}")
+    print(json.dumps(alerts, indent=2, ensure_ascii=False))

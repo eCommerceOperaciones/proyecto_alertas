@@ -1,0 +1,4 @@
+imaplib2
+email-validator
+pydantic
+loguru

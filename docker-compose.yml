@@ -1,14 +1,35 @@
-services:
+version: "3.9"
 
+networks:
+  ci_network:
+    driver: bridge
+
+volumes:
+  jenkins_home:
+    external: true   # Usa el volumen global existente
+  output:
+
+services:
   jenkins:
-    build: .
-    container_name: jenkins-gsit
-    restart: unless-stopped
+    build: ./jenkins
+    container_name: jenkins_server
     ports:
       - "8080:8080"
       - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - ci_network
+    restart: unless-stopped
 
-volumes:
-  jenkins_home:
+  selenium-firefox:
+    build: ./selenium_runner
+    container_name: selenium_runner
+    volumes:
+      - ./selenium_runner/certificado.p12:/home/seluser/certificado.p12:ro
+      - output:/home/seluser/output
+    networks:
+      - ci_network
+    shm_size: "2gb"
+    restart: unless-stopped
