@@ -1,18 +1,29 @@
 pipeline {
     agent any
 
-    environment {
-        IMAP_SERVER = 'imap.gmail.com'
-        IMAP_PORT = '993'
-        WORKSPACE = "${env.WORKSPACE}"
-    }
-
     stages {
+        stage('Checkout') {
+            steps {
+                checkout([$class: 'GitSCM',
+                    branches: [[name: '*/main']], // Cambia a tu rama real
+                    userRemoteConfigs: [[
+                        url: 'git@github.com:eCommerceOperaciones/proyecto_alertas.git',
+                        credentialsId: 'SSH-JENKINS'
+                    ]]
+                ])
+            }
+        }
+
         stage('Leer correos') {
             steps {
-                // Cargar credenciales de Jenkins (tipo "Username with password")
-                withCredentials([usernamePassword(credentialsId: 'email-creds', usernameVariable: 'EMAIL_USER', passwordVariable: 'EMAIL_PASS')]) {
+                withCredentials([
+                    file(credentialsId: 'config-env-file', variable: 'ENV_FILE'),
+                    string(credentialsId: 'EMAIL_USER', variable: 'EMAIL_USER'),
+                    string(credentialsId: 'EMAIL_PASS', variable: 'EMAIL_PASS')
+                ]) {
                     sh '''
+                        echo "[INFO] Cargando archivo .env desde credenciales..."
+                        cp "$ENV_FILE" .env
                         echo "[INFO] Ejecutando email_listener.py..."
                         python3 email_listener.py
                     '''
@@ -28,9 +39,7 @@ pipeline {
                         echo "[INFO] Se encontraron ${alerts.size()} alertas"
                         alerts.each { alert ->
                             echo "Alerta: ${alert.alert_name} | Tipo: ${alert.alert_type} | ID: ${alert.alert_id}"
-                            // Aquí puedes lanzar otros jobs según el script asociado
-                            // Ejemplo:
-                            // build job: alert.script, parameters: [string(name: 'ALERT_ID', value: alert.alert_id)]
+                            // Aquí podrías llamar Selenium o otro Job
                         }
                     } else {
                         echo "[INFO] No se encontraron alertas"
@@ -41,15 +50,14 @@ pipeline {
     }
 
     post {
+        always {
+            archiveArtifacts artifacts: '**/*.json, **/*.log', fingerprint: true
+        }
         success {
             echo "[INFO] Pipeline completado correctamente"
         }
         failure {
             echo "[ERROR] Pipeline falló"
-        }
-        always {
-            archiveArtifacts artifacts: 'listener_output.json', fingerprint: true
-            archiveArtifacts artifacts: 'email_listener.log', fingerprint: true
         }
     }
 }
