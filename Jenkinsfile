@@ -1,76 +1,75 @@
 pipeline {
     agent any
 
-    options {
-        skipDefaultCheckout()
+    environment {
+        DOCKER_COMPOSE_FILE = 'docker-compose.yml'
+        WORKSPACE_PATH = '/var/jenkins_home/workspace/GSIT_Alertas/01-Email_Listener'
     }
 
     stages {
-
         stage('Cleanup') {
             steps {
+                echo "[INFO] Limpiando workspace..."
                 deleteDir()
             }
         }
 
         stage('Checkout') {
             steps {
-                checkout scm
-                sh 'ls -la'
+                echo "[INFO] Clonando repositorio..."
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: 'origin/Dev_AREA_PRIVADA']],
+                    doGenerateSubmoduleConfigurations: false,
+                    extensions: [],
+                    userRemoteConfigs: [[
+                        url: 'bloqueado',
+                        credentialsId: 'SSH-JENKINS'
+                    ]]
+                ])
             }
         }
 
         stage('Verificar workspace') {
             steps {
-                echo "[INFO] Directorio actual: ${env.WORKSPACE}"
+                echo "[INFO] Directorio actual: ${pwd()}"
                 sh 'ls -la'
             }
         }
 
-        stage('Leer correos') {
+        stage('Instalar dependencias Python') {
             steps {
-                withCredentials([
-                    file(credentialsId: 'config-env-file', variable: 'ENV_FILE'),
-                    string(credentialsId: 'EMAIL_USER', variable: 'EMAIL_USER'),
-                    string(credentialsId: 'EMAIL_PASS', variable: 'EMAIL_PASS')
-                ]) {
-                    sh '''
-                        rm -f .env
-                        cp "$ENV_FILE" .env
-
-                        docker-compose run --rm python-runner pip install -r /app/python_runner/requirements.txt
-                        docker-compose run --rm python-runner python3 /app/src/email_listener.py
-                    '''
-                }
+                echo "[INFO] Instalando dependencias en python-runner..."
+                sh """
+                    docker compose -f ${DOCKER_COMPOSE_FILE} run --rm python-runner \
+                    ls -la /app/python_runner && \
+                    docker compose -f ${DOCKER_COMPOSE_FILE} run --rm python-runner \
+                    pip install -r /app/python_runner/requirements.txt
+                """
             }
         }
 
         stage('Procesar alertas') {
             steps {
-                script {
-                    def alerts = readJSON file: 'listener_output.json'
-                    if (alerts.size() > 0) {
-                        echo "[INFO] Se encontraron ${alerts.size()} alertas"
-                        alerts.each { alert ->
-                            echo "Alerta: ${alert.alert_name} | Tipo: ${alert.alert_type} | ID: ${alert.alert_id}"
-                        }
-                    } else {
-                        echo "[INFO] No se encontraron alertas"
-                    }
-                }
+                echo "[INFO] Ejecutando script principal..."
+                sh """
+                    docker compose -f ${DOCKER_COMPOSE_FILE} run --rm python-runner \
+                    python /app/src/main.py
+                """
             }
         }
     }
 
     post {
-        always {
-            archiveArtifacts artifacts: '**/*.json, **/*.log', fingerprint: true
-        }
         success {
-            echo "[INFO] Pipeline completado correctamente"
+            echo "[SUCCESS] Pipeline completado correctamente."
         }
         failure {
-            echo "[ERROR] Pipeline falló"
+            echo "[ERROR] Pipeline falló."
+        }
+        always {
+            echo "[INFO] Archivando artefactos..."
+            archiveArtifacts artifacts: '**/output/**', allowEmptyArchive: true
         }
     }
 }
