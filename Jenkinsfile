@@ -8,7 +8,6 @@ pipeline {
             }
         }
 
-    stages {
         stage('Verificar workspace') {
             steps {
                 dir('GSIT_Alertas/01-Email_Listener') {
