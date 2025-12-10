@@ -32,8 +32,7 @@ pipeline {
                 echo "[INFO] Instalando dependencias Python..."
                 sh """
                     docker compose -f ${DOCKER_COMPOSE_FILE} run --rm python-runner \
-                    sh -c "
-                        echo '=== CONTENIDO DE /app ===' && ls -la /app && \
+                    sh -c "                        
                         cat /app/GSIT_Alertas/requirements.txt
                         pip install --no-cache-dir -r /app/GSIT_Alertas/01-Email_Listener/python-runner/requirements.txt
                     "
@@ -46,7 +45,7 @@ pipeline {
                 echo "[INFO] Ejecutando script principal..."
                 sh """
                     docker compose -f ${DOCKER_COMPOSE_FILE} run --rm python-runner \
-                    python /app/src/main.py
+                    python /app/src/email_listener.py
                 """
             }
         }
