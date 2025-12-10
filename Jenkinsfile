@@ -16,15 +16,14 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+                sh 'ls -la'
             }
         }
 
         stage('Verificar workspace') {
             steps {
-                dir('GSIT_Alertas/01-Email_Listener') {
-                    echo "[INFO] Código ya disponible en workspace: ${env.WORKSPACE}"
-                    sh 'ls -la'
-                }
+                echo "[INFO] Directorio actual: ${env.WORKSPACE}"
+                sh 'ls -la'
             }
         }
 
@@ -38,8 +37,9 @@ pipeline {
                     sh '''
                         rm -f .env
                         cp "$ENV_FILE" .env
+
                         docker-compose run --rm python-runner pip install -r python_runner/requirements.txt
-                        docker-compose run --rm python-runner python3 python_runner/src/email_listener.py
+                        docker-compose run --rm python-runner python3 src/email_listener.py
                     '''
                 }
             }
