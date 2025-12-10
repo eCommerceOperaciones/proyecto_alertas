@@ -40,7 +40,7 @@ services:
     image: python:3.12-slim
     working_dir: /app
     volumes:
-      - .:/app
+      - ${PWD}:/app
     environment:
       - PYTHONUNBUFFERED=1
     networks:
