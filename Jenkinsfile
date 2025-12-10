@@ -10,12 +10,6 @@ pipeline {
                 deleteDir()
             }
         }
-        stage('Checkout') {
-            steps {
-                echo "[INFO] Clonando repositorio..."
-                checkout([$class: 'GitSCM', branches: [[name: '*/Dev_AREA_PRIVADA']], doGenerateSubmoduleConfigurations: false, extensions: [], userRemoteConfigs: [[url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git']]], quiet: true)
-            }
-        }
         stage('Procesar alertas') {
             steps {
                 echo "[INFO] Ejecutando script principal..."
@@ -45,8 +39,8 @@ pipeline {
         }
         always {
             script {
-                if (fileExists('output')) {
-                    archiveArtifacts artifacts: '**/output/**', allowEmptyArchive: true
+                if (fileExists('output/listener_output.json')) {
+                    archiveArtifacts artifacts: 'output/listener_output.json', allowEmptyArchive: true
                 } else {
                     echo "[INFO] No se encontraron artefactos para archivar."
                 }
