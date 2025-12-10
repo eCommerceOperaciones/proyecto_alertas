@@ -35,9 +35,10 @@ pipeline {
         always {
             script {
                 if (fileExists('output/listener_output.json')) {
-                    archiveArtifacts artifacts: 'output/listener_output.json', allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'output/listener_output.json', allowEmptyArchive: false
+                    echo "[INFO] Archivo listener_output.json archivado correctamente."
                 } else {
-                    echo "[INFO] No se encontraron artefactos para archivar."
+                    echo "[INFO] No se encontró listener_output.json para archivar."
                 }
             }
         }
