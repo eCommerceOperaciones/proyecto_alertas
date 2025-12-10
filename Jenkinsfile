@@ -15,25 +15,21 @@ pipeline {
             }
         }
 
-        stage('Checkout') {
-            steps {
-                echo "[INFO] Clonando repositorio..."
-                checkout scm
-            }
-        }
-
         stage('Procesar alertas') {
             steps {
                 echo "[INFO] Ejecutando script principal..."
                 sh """
-                    docker compose -f ${DOCKER_COMPOSE_FILE} run --rm python-runner \
-                    sh -c "
+                    docker compose -f ${DOCKER_COMPOSE_FILE} run --rm \
+                    -e EMAIL_USER=${EMAIL_USER} \
+                    -e EMAIL_PASS=${EMAIL_PASS} \
+                    python-runner sh -c "
                         pip install --no-cache-dir -r /app/GSIT_Alertas/01-Email_Listener/python-runner/requirements.txt && \
                         python /app/GSIT_Alertas/01-Email_Listener/src/email_listener.py
                     "
                 """
             }
         }
+    
     } // ← cierre de stages
 
     post {
