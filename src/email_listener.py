@@ -166,5 +166,9 @@ if __name__ == "__main__":
     output_path = os.path.join(WORKSPACE, "listener_output.json")
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(alerts, f, indent=2, ensure_ascii=False)
+
     logging.info(f"Archivo de salida guardado en: {output_path}")
-    print(json.dumps(alerts, indent=2, ensure_ascii=False))
+    logging.info(f"Total alertas encontradas: {len(alerts)}")
+    if alerts:
+        for a in alerts:
+            logging.info(f"- {a['alert_name']} ({a['alert_type']}) ID: {a['alert_id']}")
