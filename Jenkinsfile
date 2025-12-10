@@ -38,8 +38,8 @@ pipeline {
                         rm -f .env
                         cp "$ENV_FILE" .env
 
-                        docker-compose run --rm python-runner pip install -r python_runner/requirements.txt
-                        docker-compose run --rm python-runner python3 src/email_listener.py
+                        docker-compose run --rm python-runner pip install -r /app/python_runner/requirements.txt
+                        docker-compose run --rm python-runner python3 /app/src/email_listener.py
                     '''
                 }
             }
