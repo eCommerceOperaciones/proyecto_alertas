@@ -3,6 +3,8 @@ pipeline {
 
     environment {
         DOCKER_COMPOSE_FILE = 'docker-compose.yml'
+        EMAIL_USER = credentials('EMAIL_USER')  // ID de credencial en Jenkins
+        EMAIL_PASS = credentials('EMAIL_PASS')  // ID de credencial en Jenkins
     }
 
     stages {
