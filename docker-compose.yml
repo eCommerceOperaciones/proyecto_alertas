@@ -4,7 +4,9 @@ networks:
 
 volumes:
   jenkins_home:
+    external: true
   jenkins_workspace:
+    external: true
   output:
 
 services:
