@@ -45,7 +45,7 @@ pipeline {
                 echo "[INFO] Ejecutando script principal..."
                 sh """
                     docker compose -f ${DOCKER_COMPOSE_FILE} run --rm python-runner \
-                    python /app/src/email_listener.py
+                    python /app/GSIT_Alertas/01-Email_Listener/src/email_listener.py
                 """
             }
         }
