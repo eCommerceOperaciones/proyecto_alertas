@@ -1,17 +1,14 @@
 pipeline {
     agent any
+
     stages {
-        stage('Checkout') {
+        stage('Verificar workspace') {
             steps {
-                checkout([$class: 'GitSCM',
-                    branches: [[name: '*/Dev_AREA_PRIVADA']],
-                    userRemoteConfigs: [[
-                        url: 'git@github.com:eCommerceOperaciones/proyecto_alertas.git',
-                        credentialsId: 'SSH-JENKINS'
-                    ]]
-                ])
+                echo "[INFO] Código ya disponible en workspace: ${env.WORKSPACE}"
+                sh 'ls -la'
             }
         }
+
         stage('Leer correos') {
             steps {
                 withCredentials([
@@ -20,23 +17,42 @@ pipeline {
                     string(credentialsId: 'EMAIL_PASS', variable: 'EMAIL_PASS')
                 ]) {
                     sh '''
+                        echo "[INFO] Cargando archivo .env desde credenciales..."
                         cp "$ENV_FILE" .env
+                        echo "[INFO] Ejecutando email_listener.py..."
                         python3 email_listener.py
                     '''
                 }
             }
         }
+
         stage('Procesar alertas') {
             steps {
                 script {
                     def alerts = readJSON file: 'listener_output.json'
                     if (alerts.size() > 0) {
-                        echo "Se encontraron ${alerts.size()} alertas"
+                        echo "[INFO] Se encontraron ${alerts.size()} alertas"
+                        alerts.each { alert ->
+                            echo "Alerta: ${alert.alert_name} | Tipo: ${alert.alert_type} | ID: ${alert.alert_id}"
+                            // Aquí podrías llamar Selenium o otro Job
+                        }
                     } else {
-                        echo "No se encontraron alertas"
+                        echo "[INFO] No se encontraron alertas"
                     }
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: '**/*.json, **/*.log', fingerprint: true
+        }
+        success {
+            echo "[INFO] Pipeline completado correctamente"
+        }
+        failure {
+            echo "[ERROR] Pipeline falló"
         }
     }
 }
