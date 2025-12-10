@@ -15,6 +15,13 @@ pipeline {
             }
         }
 
+        stage('Checkout') {
+            steps {
+                echo "[INFO] Clonando repositorio..."
+                checkout scm
+            }
+        }
+
         stage('Procesar alertas') {
             steps {
                 echo "[INFO] Ejecutando script principal..."
