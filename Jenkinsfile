@@ -4,12 +4,7 @@ pipeline {
         DOCKER_COMPOSE_FILE = 'docker-compose.yml'
     }
     stages {
-        stage('Cleanup') {
-            steps {
-                echo "[INFO] Limpiando workspace..."
-                deleteDir()
-            }
-        }
+        
         stage('Procesar alertas') {
             steps {
                 echo "[INFO] Ejecutando script principal..."
