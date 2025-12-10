@@ -5,3 +5,5 @@ loguru
 python-dotenv
 imapclient
 bs4
+datetime
+unicodedata
