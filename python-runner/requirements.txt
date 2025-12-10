@@ -4,3 +4,4 @@ pydantic
 loguru
 python-dotenv
 imapclient
+bs4
