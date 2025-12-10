@@ -38,10 +38,14 @@ pipeline {
 
         stage('Instalar dependencias Python') {
             steps {
-                echo "[INFO] Verificando y instalando dependencias..."
+                echo "[INFO] Instalando dependencias Python..."
                 sh """
                     docker compose -f ${DOCKER_COMPOSE_FILE} run --rm python-runner \
-                    sh -c 'ls -la /app/python_runner && pip install -r /app/python_runner/requirements.txt'
+                    sh -c "
+                        echo 'Contenido de /app:' && ls -la /app && \
+                        echo 'Contenido de /app/python_runner:' && ls -la /app/python_runner && \
+                        pip install --no-cache-dir -r /app/python_runner/requirements.txt
+                    "
                 """
             }
         }
@@ -55,7 +59,6 @@ pipeline {
                 """
             }
         }
-    }
 
     post {
         success {
