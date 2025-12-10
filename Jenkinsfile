@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_COMPOSE_FILE = 'docker-compose.yml'
-        WORKSPACE = pwd()
+        // No hace falta definir WORKSPACE ni PWD, Jenkins ya lo tiene
     }
 
     stages {
@@ -17,22 +17,13 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo "[INFO] Clonando repositorio..."
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: 'origin/Dev_AREA_PRIVADA']],
-                    doGenerateSubmoduleConfigurations: false,
-                    extensions: [],
-                    userRemoteConfigs: [[
-                        url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git',
-                        credentialsId: 'SSH-JENKINS'
-                    ]]
-                ])
+                checkout scm
             }
         }
 
         stage('Verificar workspace') {
             steps {
-                echo "[INFO] Directorio actual: ${pwd()}"
+                echo "[INFO] Directorio actual: ${env.WORKSPACE}"
                 sh 'ls -la'
             }
         }
@@ -43,8 +34,8 @@ pipeline {
                 sh """
                     docker compose -f ${DOCKER_COMPOSE_FILE} run --rm python-runner \
                     sh -c "
-                        echo 'Contenido de /app:' && ls -la /app && \
-                        echo 'Contenido de /app/python_runner:' && ls -la /app/python_runner && \
+                        echo '=== CONTENIDO DE /app ===' && ls -la /app && \
+                        echo '=== REQUIREMENTS.TXT ===' && cat /app/python_runner/requirements.txt && \
                         pip install --no-cache-dir -r /app/python_runner/requirements.txt
                     "
                 """
@@ -60,7 +51,7 @@ pipeline {
                 """
             }
         }
-    } // ← cierre de stages
+    }
 
     post {
         success {
@@ -74,4 +65,4 @@ pipeline {
             archiveArtifacts artifacts: '**/output/**', allowEmptyArchive: true
         }
     }
-} // ← ESTE ES EL QUE TE FALTABA: cierre del pipeline
+}

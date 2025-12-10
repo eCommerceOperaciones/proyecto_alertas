@@ -40,7 +40,7 @@ services:
     image: python:3.12-slim
     working_dir: /app
     volumes:
-      - ${WORKSPACE}:/app
+      - /var/jenkins_home/workspace/GSIT_Alertas/01-Email_Listener:/app
     environment:
       - PYTHONUNBUFFERED=1
     networks:
