@@ -170,7 +170,6 @@ if __name__ == "__main__":
         json.dump(alerts, f, indent=2, ensure_ascii=False)
     logging.info(f"Archivo de salida guardado en: {output_path}")
 
-    logging.info(f"Archivo de salida guardado en: {output_path}")
     logging.info(f"Total alertas encontradas: {len(alerts)}")
     if alerts:
         for a in alerts:

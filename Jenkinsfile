@@ -39,6 +39,7 @@ pipeline {
                     echo "[INFO] Archivo listener_output.json archivado correctamente."
                 } else {
                     echo "[INFO] No se encontró listener_output.json para archivar."
+                    sh 'ls -R'
                 }
             }
         }
