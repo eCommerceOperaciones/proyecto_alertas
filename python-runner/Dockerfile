@@ -15,8 +15,4 @@ WORKDIR /app
 COPY 01-Email_Listener/python-runner/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
-COPY . .
-
-VOLUME ["/app/credentials"]
-
-CMD ["python", "ent_1.py"]
+# Montar el código en /app en tiempo de ejecución
