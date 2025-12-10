@@ -17,11 +17,10 @@ pipeline {
                     string(credentialsId: 'EMAIL_PASS', variable: 'EMAIL_PASS')
                 ]) {
                     sh '''
-                        echo "[INFO] Cargando archivo .env desde credenciales..."
-                        rm -f .env                        
+                        rm -f .env
                         cp "$ENV_FILE" .env
-                        echo "[INFO] Ejecutando email_listener.py..."
-                        python3 src/email_listener.py
+                        docker-compose run --rm python-runner pip install -r requirements.txt
+                        docker-compose run --rm python-runner python3 python_runner/src/email_listener.py
                     '''
                 }
             }
