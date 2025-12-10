@@ -4,9 +4,7 @@ networks:
 
 volumes:
   jenkins_home:
-    external: true
   jenkins_workspace:
-    external: true
   output:
 
 services:
@@ -41,7 +39,7 @@ services:
     container_name: python_runner
     working_dir: /app
     volumes:
-      - /var/jenkins_home/workspace/GSIT_Alertas/01-Email_Listener:/app
+      - jenkins_workspace:/app
     command: tail -f /dev/null
     environment:
       - PYTHONUNBUFFERED=1

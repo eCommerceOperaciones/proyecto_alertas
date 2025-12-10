@@ -3,7 +3,6 @@ pipeline {
 
     environment {
         DOCKER_COMPOSE_FILE = 'docker-compose.yml'
-        WORKSPACE_PATH = '/var/jenkins_home/workspace/GSIT_Alertas/01-Email_Listener'
     }
 
     stages {
@@ -23,7 +22,7 @@ pipeline {
                     doGenerateSubmoduleConfigurations: false,
                     extensions: [],
                     userRemoteConfigs: [[
-                        url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git',
+                        url: 'bloqueado',
                         credentialsId: 'SSH-JENKINS'
                     ]]
                 ])
@@ -37,22 +36,12 @@ pipeline {
             }
         }
 
-        stage('Verificar requirements') {
-            steps {
-                echo "[INFO] Comprobando que requirements.txt existe..."
-                sh """
-                    docker compose -f ${DOCKER_COMPOSE_FILE} run --rm python-runner \
-                    ls -la /app/python_runner
-                """
-            }
-        }
-
         stage('Instalar dependencias Python') {
             steps {
-                echo "[INFO] Instalando dependencias en python-runner..."
+                echo "[INFO] Verificando y instalando dependencias..."
                 sh """
                     docker compose -f ${DOCKER_COMPOSE_FILE} run --rm python-runner \
-                    pip install -r /app/python_runner/requirements.txt
+                    sh -c 'ls -la /app/python_runner && pip install -r /app/python_runner/requirements.txt'
                 """
             }
         }
