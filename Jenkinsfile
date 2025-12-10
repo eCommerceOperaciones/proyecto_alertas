@@ -13,7 +13,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo "[INFO] Clonando repositorio..."
-                checkout([$class: 'GitSCM', branches: [[name: '*/Dev_AREA_PRIVADA']], doGenerateSubmoduleConfigurations: false, extensions: [], userRemoteConfigs: [[url: 'git@repo.git']]], quiet: true)
+                checkout([$class: 'GitSCM', branches: [[name: '*/Dev_AREA_PRIVADA']], doGenerateSubmoduleConfigurations: false, extensions: [], userRemoteConfigs: [[url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git']]], quiet: true)
             }
         }
         stage('Procesar alertas') {
