@@ -37,13 +37,13 @@ services:
     restart: unless-stopped
 
   python-runner:
-    image: python:3.12-slim
-    container_name: python_runner
-    working_dir: /app
-    volumes:
-      - jenkins_workspace:/app
-    command: tail -f /dev/null
-    environment:
-      - PYTHONUNBUFFERED=1
-    networks:
-      - ci_network
+  image: python:3.12-slim
+  container_name: python_runner
+  working_dir: /app
+  volumes:
+    - /var/jenkins_home/workspace/GSIT_Alertas/01-Email_Listener:/app
+  command: tail -f /dev/null
+  environment:
+    - PYTHONUNBUFFERED=1
+  networks:
+    - ci_network

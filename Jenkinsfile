@@ -60,6 +60,14 @@ pipeline {
         }
     }
 
+        stage('Verificar requirements') {
+            steps {
+                sh """
+                    docker compose run --rm python-runner ls -la /app/python_runner
+                """
+            }
+        }
+
     post {
         success {
             echo "[SUCCESS] Pipeline completado correctamente."
