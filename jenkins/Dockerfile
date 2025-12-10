@@ -2,10 +2,13 @@ FROM jenkins/jenkins:lts
 
 USER root
 
-# Instalar Docker CLI dentro de Jenkins para que pueda ejecutar contenedores
+# Instalar Docker CLI y docker-compose dentro de Jenkins
 RUN apt-get update && \
     apt-get install -y docker.io docker-compose && \
     rm -rf /var/lib/apt/lists/*
+
+# Crear grupo docker si no existe y añadir jenkins al grupo
+RUN groupadd -f docker && usermod -aG docker jenkins
 
 # Volver al usuario Jenkins
 USER jenkins
