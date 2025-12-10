@@ -3,3 +3,4 @@ email-validator
 pydantic
 loguru
 python-dotenv
+imapclient
