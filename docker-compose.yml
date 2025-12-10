@@ -4,7 +4,9 @@ networks:
 
 volumes:
   jenkins_home:
-    external: true   # Usa el volumen global existente
+    external: true
+  jenkins_workspace:
+    external: true
   output:
 
 services:
@@ -16,6 +18,7 @@ services:
       - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
+      - jenkins_workspace:/var/jenkins_home/workspace
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - ci_network
@@ -25,6 +28,7 @@ services:
     build: ./selenium_runner
     container_name: selenium_runner
     volumes:
+      - jenkins_workspace:/app
       - ./selenium_runner/certificado.p12:/home/seluser/certificado.p12:ro
       - output:/home/seluser/output
     networks:
@@ -37,8 +41,7 @@ services:
     container_name: python_runner
     working_dir: /app
     volumes:
-      # Monta directamente el workspace de Jenkins
-      - /var/jenkins_home/workspace/GSIT_Alertas/01-Email_Listener:/app
+      - jenkins_workspace:/app
     command: tail -f /dev/null
     environment:
       - PYTHONUNBUFFERED=1
