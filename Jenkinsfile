@@ -37,12 +37,20 @@ pipeline {
             }
         }
 
+        stage('Verificar requirements') {
+            steps {
+                echo "[INFO] Comprobando que requirements.txt existe..."
+                sh """
+                    docker compose -f ${DOCKER_COMPOSE_FILE} run --rm python-runner \
+                    ls -la /app/python_runner
+                """
+            }
+        }
+
         stage('Instalar dependencias Python') {
             steps {
                 echo "[INFO] Instalando dependencias en python-runner..."
                 sh """
-                    docker compose -f ${DOCKER_COMPOSE_FILE} run --rm python-runner \
-                    ls -la /app/python_runner && \
                     docker compose -f ${DOCKER_COMPOSE_FILE} run --rm python-runner \
                     pip install -r /app/python_runner/requirements.txt
                 """
@@ -59,14 +67,6 @@ pipeline {
             }
         }
     }
-
-        stage('Verificar requirements') {
-            steps {
-                sh """
-                    docker compose run --rm python-runner ls -la /app/python_runner
-                """
-            }
-        }
 
     post {
         success {
