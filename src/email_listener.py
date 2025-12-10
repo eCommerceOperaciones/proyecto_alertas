@@ -163,11 +163,12 @@ def check_email():
 
 if __name__ == "__main__":
     alerts = check_email()
-    output_dir = os.path.join(WORKSPACE, "output")
+    output_dir = os.path.join(os.getenv("WORKSPACE", os.getcwd()), "output")
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, "listener_output.json")
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(alerts, f, indent=2, ensure_ascii=False)
+    logging.info(f"Archivo de salida guardado en: {output_path}")
 
     logging.info(f"Archivo de salida guardado en: {output_path}")
     logging.info(f"Total alertas encontradas: {len(alerts)}")
