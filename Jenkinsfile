@@ -59,6 +59,7 @@ pipeline {
                 """
             }
         }
+    } // ← cierre de stages
 
     post {
         success {
@@ -72,4 +73,4 @@ pipeline {
             archiveArtifacts artifacts: '**/output/**', allowEmptyArchive: true
         }
     }
-}
+} // ← ESTE ES EL QUE TE FALTABA: cierre del pipeline
