@@ -5,7 +5,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout([$class: 'GitSCM',
-                    branches: [[name: '*/main']], // Cambia a tu rama real
+                    branches: [[name: '*/Dev_AREA_PRIVADA']], // Cambia a tu rama real
                     userRemoteConfigs: [[
                         url: 'git@github.com:eCommerceOperaciones/proyecto_alertas.git',
                         credentialsId: 'SSH-JENKINS'
