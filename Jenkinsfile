@@ -3,7 +3,6 @@ pipeline {
 
     environment {
         DOCKER_COMPOSE_FILE = 'docker-compose.yml'
-        // No hace falta definir WORKSPACE ni PWD, Jenkins ya lo tiene
     }
 
     stages {
@@ -35,8 +34,8 @@ pipeline {
                     docker compose -f ${DOCKER_COMPOSE_FILE} run --rm python-runner \
                     sh -c "
                         echo '=== CONTENIDO DE /app ===' && ls -la /app && \
-                        echo '=== REQUIREMENTS.TXT ===' && cat /app/python_runner/requirements.txt && \
-                        pip install --no-cache-dir -r /app/python_runner/requirements.txt
+                        cat /app/requirements.txt
+                        pip install --no-cache-dir -r /app/requirements.txt
                     "
                 """
             }
