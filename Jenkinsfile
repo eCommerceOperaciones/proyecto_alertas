@@ -1,10 +1,21 @@
 pipeline {
     agent any
 
+    options {
+        skipDefaultCheckout()
+    }
+
     stages {
+
         stage('Cleanup') {
             steps {
                 deleteDir()
+            }
+        }
+
+        stage('Checkout') {
+            steps {
+                checkout scm
             }
         }
 
@@ -42,7 +53,6 @@ pipeline {
                         echo "[INFO] Se encontraron ${alerts.size()} alertas"
                         alerts.each { alert ->
                             echo "Alerta: ${alert.alert_name} | Tipo: ${alert.alert_type} | ID: ${alert.alert_id}"
-                            // Aquí podrías llamar Selenium o otro Job
                         }
                     } else {
                         echo "[INFO] No se encontraron alertas"
