@@ -4,8 +4,10 @@ pipeline {
     stages {
         stage('Verificar workspace') {
             steps {
-                echo "[INFO] Código ya disponible en workspace: ${env.WORKSPACE}"
-                sh 'ls -la'
+                dir('GSIT_Alertas/01-Email_Listener') {
+                    echo "[INFO] Código ya disponible en workspace: ${env.WORKSPACE}"
+                    sh 'ls -la'
+                }
             }
         }
 
