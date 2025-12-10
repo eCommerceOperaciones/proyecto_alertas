@@ -26,8 +26,8 @@ pipeline {
             sh """
                 docker compose -f ${DOCKER_COMPOSE_FILE} run --rm python-runner \
                 sh -c "
-                    pip install --no-cache-dir -r /app/01-Email_Listener/python-runner/requirements.txt && \
-                    python /app/01-Email_Listener/src/email_listener.py
+                    pip install --no-cache-dir -r /app/GSIT_Alertas/01-Email_Listener/python-runner/requirements.txt && \
+                    python /app/GSIT_Alertas/01-Email_Listener/src/email_listener.py
                 "
             """
         }
