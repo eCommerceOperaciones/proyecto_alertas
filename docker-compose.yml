@@ -38,10 +38,9 @@ services:
 
   python-runner:
     image: python:3.12-slim
-    build: null
     working_dir: /app
     volumes:
-      - /var/jenkins_home/workspace/GSIT_Alertas/01-Email_Listener:/app:z
+      - jenkins_workspace:/app
     environment:
       - PYTHONUNBUFFERED=1
     networks:
