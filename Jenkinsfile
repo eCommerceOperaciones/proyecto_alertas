@@ -23,7 +23,7 @@ pipeline {
                     doGenerateSubmoduleConfigurations: false,
                     extensions: [],
                     userRemoteConfigs: [[
-                        url: 'bloqueado',
+                        url: 'https://github.com/eCommerceOperaciones/proyecto_alertas.git',
                         credentialsId: 'SSH-JENKINS'
                     ]]
                 ])

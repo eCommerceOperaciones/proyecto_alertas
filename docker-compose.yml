@@ -47,6 +47,3 @@ services:
       - PYTHONUNBUFFERED=1
     networks:
       - ci_network
-
-  
-    
