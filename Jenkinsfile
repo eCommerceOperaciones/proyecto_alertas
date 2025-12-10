@@ -20,7 +20,7 @@ pipeline {
                         echo "[INFO] Cargando archivo .env desde credenciales..."
                         cp "$ENV_FILE" .env
                         echo "[INFO] Ejecutando email_listener.py..."
-                        python3 email_listener.py
+                        python3 src/email_listener.py
                     '''
                 }
             }
