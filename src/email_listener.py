@@ -23,7 +23,7 @@ logging.basicConfig(
 )
 
 # Cargar variables de entorno (.env para desarrollo, Jenkins env vars en producción)
-load_dotenv()
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 WORKSPACE = os.getenv("WORKSPACE", os.getcwd())
 IMAP_SERVER = os.getenv("IMAP_SERVER", "imap.gmail.com")

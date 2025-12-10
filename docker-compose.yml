@@ -41,7 +41,6 @@ services:
     working_dir: /app
     volumes:
       - jenkins_workspace:/app
+      - ./01-Email_Listener/.env:/app/.env:ro
     environment:
       - PYTHONUNBUFFERED=1
-    networks:
-      - ci_network
