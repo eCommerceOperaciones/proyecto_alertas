@@ -1,3 +1,5 @@
+version: '3.8'
+
 networks:
   ci_network:
     driver: bridge
@@ -5,9 +7,7 @@ networks:
 volumes:
   jenkins_home:
     external: true
-  jenkins_workspace:
-    external: true
-  output:
+  shared_output:        # ← este es el volumen que van a compartir todos los jobs
 
 services:
   jenkins:
@@ -18,35 +18,37 @@ services:
       - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
-      - jenkins_workspace:/var/jenkins_home/workspace
       - /var/run/docker.sock:/var/run/docker.sock
+      - shared_output:/shared_output
     networks:
       - ci_network
     restart: unless-stopped
+
+  python-runner:
+    image: python:3.12-slim
+    working_dir: /app/GSIT_Alertas/01-Email_Listener
+    volumes:
+      - .:/app/GSIT_Alertas/01-Email_Listener
+      - ../..:/app
+      - shared_output:/shared_output
+      - ./01-Email_Listener/.env:/app/GSIT_Alertas/01-Email_Listener/.env:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - WORKSPACE=/shared_output
+    networks:
+      - ci_network
 
   selenium-firefox:
     build: ./selenium_runner
     container_name: selenium_runner
     volumes:
-      - jenkins_workspace:/app
+      - .:/app/GSIT_Alertas/01-Email_Listener
+      - ../..:/app
+      - shared_output:/shared_output
       - ./selenium_runner/certificado.p12:/home/seluser/certificado.p12:ro
-      - output:/home/seluser/output
+    environment:
+      - WORKSPACE=/shared_output
+    shm_size: "2gb"
     networks:
       - ci_network
-    shm_size: "2gb"
     restart: unless-stopped
-
-  services:
-    python-runner:
-      image: python:3.12-slim
-      working_dir: /app/GSIT_Alertas/01-Email_Listener
-      volumes:
-        # Montamos el workspace REAL del job (no un volumen nombrado)
-        - .:/app/GSIT_Alertas/01-Email_Listener
-        # Si necesitas más carpetas del repo (ej. utils compartidos), sube más arriba
-        - ../..:/app   # opcional, si tienes cosas fuera de 01-Email_Listener
-      environment:
-        - PYTHONUNBUFFERED=1
-        - WORKSPACE=/app/GSIT_Alertas/01-Email_Listener
-      # Si usas .env
-      # - ./01-Email_Listener/.env:/app/GSIT_Alertas/01-Email_Listener/.env:ro  
