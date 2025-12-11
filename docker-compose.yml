@@ -28,9 +28,11 @@ services:
     image: python:3.12-slim
     working_dir: /app/GSIT_Alertas/01-Email_Listener
     volumes:
-      - .:/app/GSIT_Alertas/01-Email_Listener
-      - ../..:/app
+      # Montamos TODO el repositorio desde la raíz del workspace
+      - ../../..:/app
+      # Volumen compartido para JSON y capturas
       - shared_output:/shared_output
+      # .env
       - ./01-Email_Listener/.env:/app/GSIT_Alertas/01-Email_Listener/.env:ro
     environment:
       - PYTHONUNBUFFERED=1
@@ -51,4 +53,4 @@ services:
     shm_size: "2gb"
     networks:
       - ci_network
-    restart: unless-stopped
+    
