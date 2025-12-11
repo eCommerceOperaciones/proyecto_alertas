@@ -1,0 +1,66 @@
+pipeline {
+    agent any
+    environment {
+        BUILD_ID = "${env.BUILD_NUMBER}"
+        ARTEFACTOS_DIR = "artefactos/build_${BUILD_ID}"
+    }
+    stages {
+        stage('Job 1 - Alertas') {
+            steps {
+                build job: 'Job1_Alertas', parameters: [
+                    string(name: 'BUILD_ID', value: BUILD_ID),
+                    string(name: 'ARTEFACTOS_DIR', value: ARTEFACTOS_DIR)
+                ]
+            }
+        }
+        stage('Job 2 - Procesar JSON') {
+            steps {
+                build job: 'Job2_Procesar', parameters: [
+                    string(name: 'BUILD_ID', value: BUILD_ID),
+                    string(name: 'ARTEFACTOS_DIR', value: ARTEFACTOS_DIR)
+                ]
+            }
+        }
+        stage('Job 3 - Selenium') {
+            steps {
+                build job: 'Job3_Selenium', parameters: [
+                    string(name: 'BUILD_ID', value: BUILD_ID),
+                    string(name: 'ARTEFACTOS_DIR', value: ARTEFACTOS_DIR)
+                ]
+            }
+        }
+        stage('Job 4 - Notificaciones') {
+            steps {
+                build job: 'Job4_Notificaciones', parameters: [
+                    string(name: 'BUILD_ID', value: BUILD_ID),
+                    string(name: 'ARTEFACTOS_DIR', value: ARTEFACTOS_DIR)
+                ]
+            }
+        }
+        stage('Job 5 - Excel') {
+            steps {
+                build job: 'Job5_Excel', parameters: [
+                    string(name: 'BUILD_ID', value: BUILD_ID),
+                    string(name: 'ARTEFACTOS_DIR', value: ARTEFACTOS_DIR)
+                ]
+            }
+        }
+        stage('Job 6 - Limpieza') {
+            steps {
+                build job: 'Job6_Limpieza', parameters: [
+                    string(name: 'BUILD_ID', value: BUILD_ID),
+                    string(name: 'ARTEFACTOS_DIR', value: ARTEFACTOS_DIR)
+                ]
+            }
+        }
+    }
+    post {
+        failure {
+            build job: 'Job4_Notificaciones', parameters: [
+                string(name: 'BUILD_ID', value: BUILD_ID),
+                string(name: 'ARTEFACTOS_DIR', value: ARTEFACTOS_DIR),
+                string(name: 'ERROR', value: currentBuild.result)
+            ]
+        }
+    }
+}

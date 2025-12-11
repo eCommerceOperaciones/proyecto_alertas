@@ -163,7 +163,7 @@ def check_email():
 
 if __name__ == "__main__":
     alerts = check_email()
-    output_dir = os.path.join(os.getenv("WORKSPACE", os.getcwd()), "output")
+    output_dir = "/shared_output"
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, "listener_output.json")
     with open(output_path, "w", encoding="utf-8") as f:
